@@ -47,18 +47,21 @@ $(KIT): $(KITSWIFTS)
 # ---------- Finder extension ----------
 $(EXTEXE): $(KIT) $(EXTSWIFTS) NewForgeFinderExt/Info.plist
 	@mkdir -p $(EXT)/Contents/MacOS $(EXT)/Contents/Resources
-	$(SWIFTC) -emit-library \
+	$(SWIFTC) -emit-executable \
 	  -module-name NewForgeFinderExt \
 	  -sdk $(SDK) -target $(TARGET) \
 	  -module-cache-path "$(MODULECACHE)" \
 	  -I $(BUILD) $(EXTSWIFTS) \
 	  -L $(BUILD) -lNewForgeKit \
-	  -framework Cocoa -framework FinderSync \
+	  -framework Cocoa -framework FinderSync -framework Foundation \
+	  -Xlinker -e -Xlinker _NSExtensionMain \
 	  -o $(EXTEXE)
 	cp NewForgeFinderExt/Info.plist $(EXT)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(EXT_BUNDLE_ID)" $(EXT)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable NewForgeFinderExt" $(EXT)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundlePackageType XPC!" $(EXT)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleName NewForgeFinderExt" $(EXT)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" $(EXT)/Contents/Info.plist
 	codesign --force --sign - $(EXT) 2>/dev/null || true
 
 # ---------- Container app ----------
@@ -76,6 +79,8 @@ $(APPEXE): $(KIT) $(APPSWIFTS) NewForge/NewForge-Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_ID)" $(APP)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable NewForge" $(APP)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundlePackageType APPL" $(APP)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleName NewForge" $(APP)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" $(APP)/Contents/Info.plist
 
 $(APP): $(APPEXE) $(EXTEXE)
 	@mkdir -p $(APP)/Contents/PlugIns

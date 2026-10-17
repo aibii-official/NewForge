@@ -30,7 +30,7 @@ make run      # 构建并启动 NewForge.app
 
 然后：**系统设置 → 隐私与安全性 → 扩展 → Finder 扩展**，勾选「NewForge」。在访达里右键即可看到「新建文件」。
 
-> 未用开发者账号签名的构建，macOS 可能不在扩展列表中显示它。见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) 了解本地调试与签名细节。
+> **注意**：Gatekeeper 会拒绝 ad-hoc 签名的扩展（`spctl` 返回 `rejected`），所以扩展不会出现在扩展列表中。要真正启用，需用免费的 Apple Developer Team 签名——见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#signing-caveat-important)。`make` 构建仍可用于验证逻辑（`make test`）。
 
 其他常用命令：
 

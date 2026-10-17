@@ -37,19 +37,58 @@ open build/NewForge.app   # registers the .appex
 Tick **NewForge** under System Settings → Privacy & Security → Extensions →
 Finder Extensions, then right-click in Finder.
 
-### Ad-hoc signing caveat
+### Signing caveat (important)
 
-macOS hides Finder extensions from unsigned/ad-hoc apps on some versions.
-If the extension does not show up in the list:
+macOS **Gatekeeper rejects ad-hoc signed app extensions** outright:
+`spctl --assess --type execute <appex>` returns `rejected`, and the
+extension never appears in `pluginkit -m -p com.apple.FinderSync` even
+though LaunchServices registers the bundle. This is a hard security
+policy, not a configuration issue.
 
-1. Use `project.yml` + XcodeGen to build with your (free) Apple Developer
-   team: set `DEVELOPMENT_TEAM` in `Config/Shared.xcconfig` or in Xcode's
-   Signing tab, then run from Xcode once.
-2. Or keep iterating on logic via `make test` — the template engine and
-   file creation paths are fully covered without the extension host.
+To actually run the extension in Finder you must build with a (free)
+Apple Developer team:
 
-`pluginkit -m | grep -i newforge` shows whether the system sees the
-extension after `open`-ing the app.
+1. `brew install xcodegen && ./Scripts/gen-project.sh`
+2. Open `NewForge.xcodeproj`, select the **NewForge** target → Signing &
+   Capabilities → pick your Team (a free personal team works).
+3. Do the same for **NewForgeFinderExt**.
+4. Run the app once from Xcode, then enable it in Extensions settings.
+
+The Makefile path is still useful for iterating on logic — `make test`
+fully covers the template engine, file creation and naming panel without
+needing the extension host.
+
+### Debugging checklist
+
+If the extension does not appear after signing with a team:
+
+```bash
+# Is the bundle registered with LaunchServices?
+pluginkit -m -i com.newforge.app.finderext        # exit 0 = known
+
+# Is it listed (elected) for the FinderSync point?
+pluginkit -m -p com.apple.FinderSync | grep -i newforge
+
+# Does Gatekeeper accept it?
+spctl --assess --type execute -v \
+  build/NewForge.app/Contents/PlugIns/NewForgeFinderExt.appex
+
+# Is the entry point NSExtensionMain (not Swift's _main)?
+nm .../NewForgeFinderExt | grep NSExtensionMain   # -> U _NSExtensionMain
+
+# Re-register and relaunch
+lsregister -f -R trusted "$PWD/build/NewForge.app"
+open build/NewForge.app
+```
+
+Two build details the Makefile handles that are easy to get wrong by hand:
+
+- `NSExtensionPrincipalClass` must be a literal `Module.Class` string;
+  Xcode's `$(PRODUCT_MODULE_NAME)` variable is not expanded when you copy
+  an Info.plist verbatim, so the Makefile substitutes real values.
+- The extension binary must use `NSExtensionMain` as its entry point
+  (`-Xlinker -e -Xlinker _NSExtensionMain`), which Foundation exports; it
+  reads the principal class from the plist and hosts the XPC listener.
 
 ## Architecture notes
 
