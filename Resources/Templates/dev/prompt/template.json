@@ -1,0 +1,18 @@
+{
+  "id": "dev.prompt",
+  "version": 1,
+  "name": {
+    "en": "Prompt Template",
+    "zh-Hans": "Prompt 模板"
+  },
+  "fileExtension": "md",
+  "group": "dev",
+  "icon": "brain",
+  "defaultName": {
+    "en": "prompt-{{date}}",
+    "zh-Hans": "提示词-{{date}}"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "office.excel",
+  "version": 1,
+  "name": {
+    "en": "Excel Workbook",
+    "zh-Hans": "Excel 工作簿"
+  },
+  "fileExtension": "xlsx",
+  "group": "office",
+  "icon": "tablecells",
+  "defaultName": {
+    "en": "Untitled",
+    "zh-Hans": "未命名表格"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "binary"
+}

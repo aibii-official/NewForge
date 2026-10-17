@@ -1,0 +1,18 @@
+{
+  "id": "misc.text",
+  "version": 1,
+  "name": {
+    "en": "Plain Text",
+    "zh-Hans": "纯文本"
+  },
+  "fileExtension": "txt",
+  "group": "misc",
+  "icon": "doc.plaintext",
+  "defaultName": {
+    "en": "Untitled",
+    "zh-Hans": "未命名"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "text"
+}

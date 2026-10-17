@@ -1,0 +1,18 @@
+{
+  "id": "web.html",
+  "version": 1,
+  "name": {
+    "en": "HTML Page",
+    "zh-Hans": "HTML 页面"
+  },
+  "fileExtension": "html",
+  "group": "web",
+  "icon": "globe",
+  "defaultName": {
+    "en": "index",
+    "zh-Hans": "index"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

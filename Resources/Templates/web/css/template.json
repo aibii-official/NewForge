@@ -1,0 +1,18 @@
+{
+  "id": "web.css",
+  "version": 1,
+  "name": {
+    "en": "CSS Stylesheet",
+    "zh-Hans": "CSS 样式表"
+  },
+  "fileExtension": "css",
+  "group": "web",
+  "icon": "paintbrush",
+  "defaultName": {
+    "en": "style",
+    "zh-Hans": "style"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

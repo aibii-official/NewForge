@@ -1,0 +1,9 @@
+build/
+NewForge.xcodeproj/
+DerivedData/
+.DS_Store
+*.o
+*.swiftmodule
+*.swiftdoc
+*.swiftsourceinfo
+ModuleCache/

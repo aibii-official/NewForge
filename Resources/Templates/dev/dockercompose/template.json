@@ -1,0 +1,18 @@
+{
+  "id": "dev.dockercompose",
+  "version": 1,
+  "name": {
+    "en": "Docker Compose",
+    "zh-Hans": "Docker Compose"
+  },
+  "fileExtension": "yml",
+  "group": "dev",
+  "icon": "shippingboxes",
+  "defaultName": {
+    "en": "docker-compose",
+    "zh-Hans": "docker-compose"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "text"
+}

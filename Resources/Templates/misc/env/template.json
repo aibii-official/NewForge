@@ -1,0 +1,18 @@
+{
+  "id": "misc.env",
+  "version": 1,
+  "name": {
+    "en": "Environment File",
+    "zh-Hans": "环境变量文件"
+  },
+  "fileExtension": "env",
+  "group": "misc",
+  "icon": "key",
+  "defaultName": {
+    "en": ".env",
+    "zh-Hans": ".env"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "text"
+}

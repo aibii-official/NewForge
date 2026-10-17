@@ -1,0 +1,18 @@
+{
+  "id": "analysis.csv",
+  "version": 1,
+  "name": {
+    "en": "CSV File",
+    "zh-Hans": "CSV 数据文件"
+  },
+  "fileExtension": "csv",
+  "group": "analysis",
+  "icon": "tablecells",
+  "defaultName": {
+    "en": "data",
+    "zh-Hans": "数据"
+  },
+  "prompt": true,
+  "openAfterCreate": false,
+  "kind": "text"
+}

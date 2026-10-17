@@ -1,0 +1,18 @@
+{
+  "id": "analysis.jupyter",
+  "version": 1,
+  "name": {
+    "en": "Jupyter Notebook",
+    "zh-Hans": "Jupyter 笔记本"
+  },
+  "fileExtension": "ipynb",
+  "group": "analysis",
+  "icon": "chart.xyaxis.line",
+  "defaultName": {
+    "en": "analysis-{{date}}",
+    "zh-Hans": "分析-{{date}}"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "analysis.sql",
+  "version": 1,
+  "name": {
+    "en": "SQL Query",
+    "zh-Hans": "SQL 查询"
+  },
+  "fileExtension": "sql",
+  "group": "analysis",
+  "icon": "cylinder",
+  "defaultName": {
+    "en": "query-{{date}}",
+    "zh-Hans": "查询-{{date}}"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

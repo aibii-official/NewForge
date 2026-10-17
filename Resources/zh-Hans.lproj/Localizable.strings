@@ -1,0 +1,52 @@
+/* NewForge - 简体中文 */
+
+"menu.root" = "新建文件";
+"menu.empty" = "暂无可用模板";
+"menu.hint" = "按住 Option 重命名，按住 Control 立即创建";
+"menu.item.prompt" = "%@…";
+
+"panel.title" = "新建 %@";
+"panel.prompt" = "文件名称：";
+"panel.cancel" = "取消";
+"panel.create" = "创建";
+
+"alert.createFailed" = "无法创建文件";
+"error.emptyName" = "文件名不能为空。";
+"error.invalidName" = "文件名包含不允许的字符。";
+"error.unreadableTemplate" = "无法读取模板：%@";
+
+"menubar.enabledCount" = "已启用 %d 种模板";
+"menubar.preferences" = "偏好设置…";
+"menubar.openTemplates" = "打开模板文件夹";
+"menubar.howToEnable" = "如何启用 Finder 扩展…";
+"menubar.quit" = "退出 NewForge";
+
+"prefs.templates" = "模板";
+"prefs.general" = "通用";
+"prefs.enable" = "在 Finder 中启用";
+"prefs.templates.subtitle" = "勾选的模板会出现在访达右键「新建文件」菜单中。";
+"prefs.loadErrors" = "%d 个模板加载失败，请检查模板文件夹。";
+"prefs.openFolder" = "打开模板文件夹";
+"prefs.reload" = "重新加载";
+"prefs.badge.custom" = "自定义";
+"prefs.naming" = "命名方式";
+"prefs.naming.smart" = "按模板建议询问（推荐）";
+"prefs.naming.prompt" = "总是询问文件名";
+"prefs.naming.silent" = "从不询问，自动命名";
+"prefs.naming.hint" = "在访达菜单中：按住 Option 强制弹出命名框，按住 Control 立即创建。";
+"prefs.behavior" = "行为";
+"prefs.autoOpen" = "创建后自动打开文件";
+
+"group.office" = "办公";
+"group.analysis" = "数据分析";
+"group.dev" = "开发";
+"group.web" = "前端";
+"group.misc" = "其他";
+"group.other" = "其他";
+
+"help.title" = "启用 Finder 扩展";
+"help.step1" = "打开「系统设置 > 隐私与安全性 > 扩展 > Finder 扩展」（或「添加的扩展」）。";
+"help.step2" = "勾选列表中的「NewForge」。";
+"help.step3" = "在任意访达窗口或桌面右键：菜单中出现「新建文件」。";
+"help.openSettings" = "打开扩展设置";
+"help.note" = "开发阶段扩展未签名，macOS 可能会隐藏它；请使用开发者签名构建（见 docs/DEVELOPMENT.md）。";

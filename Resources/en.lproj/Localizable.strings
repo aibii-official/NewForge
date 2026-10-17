@@ -1,0 +1,52 @@
+/* NewForge - English */
+
+"menu.root" = "New File";
+"menu.empty" = "No Templates Available";
+"menu.hint" = "Hold Option to rename, Control for instant create";
+"menu.item.prompt" = "%@…";
+
+"panel.title" = "New %@";
+"panel.prompt" = "File name:";
+"panel.cancel" = "Cancel";
+"panel.create" = "Create";
+
+"alert.createFailed" = "Could Not Create File";
+"error.emptyName" = "The file name is empty.";
+"error.invalidName" = "The file name contains characters that are not allowed.";
+"error.unreadableTemplate" = "Cannot read template: %@";
+
+"menubar.enabledCount" = "%d template types enabled";
+"menubar.preferences" = "Preferences…";
+"menubar.openTemplates" = "Open Templates Folder";
+"menubar.howToEnable" = "How to Enable the Finder Extension…";
+"menubar.quit" = "Quit NewForge";
+
+"prefs.templates" = "Templates";
+"prefs.general" = "General";
+"prefs.enable" = "Enable in Finder";
+"prefs.templates.subtitle" = "Checked templates appear in the Finder \"New File\" menu.";
+"prefs.loadErrors" = "%d template(s) failed to load. Check the Templates folder.";
+"prefs.openFolder" = "Open Templates Folder";
+"prefs.reload" = "Reload";
+"prefs.badge.custom" = "Custom";
+"prefs.naming" = "Naming";
+"prefs.naming.smart" = "Ask when the template suggests it";
+"prefs.naming.prompt" = "Always ask for a name";
+"prefs.naming.silent" = "Never ask, name automatically";
+"prefs.naming.hint" = "In the Finder menu: hold Option to force the rename dialog, hold Control to create instantly.";
+"prefs.behavior" = "Behavior";
+"prefs.autoOpen" = "Open file after creation";
+
+"group.office" = "Office";
+"group.analysis" = "Data Analysis";
+"group.dev" = "Development";
+"group.web" = "Web";
+"group.misc" = "Miscellaneous";
+"group.other" = "Other";
+
+"help.title" = "Enable the Finder Extension";
+"help.step1" = "Open System Settings > Privacy & Security > Extensions > Finder Extensions (or Added Extensions).";
+"help.step2" = "Check \"NewForge\" in the list.";
+"help.step3" = "Right-click in any Finder window or on the Desktop: \"New File\" appears in the menu.";
+"help.openSettings" = "Open Extensions Settings";
+"help.note" = "During development the extension is unsigned, so macOS may hide it until the app is built with a development team (see docs/DEVELOPMENT.md).";

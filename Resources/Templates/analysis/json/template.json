@@ -1,0 +1,18 @@
+{
+  "id": "analysis.json",
+  "version": 1,
+  "name": {
+    "en": "JSON File",
+    "zh-Hans": "JSON 文件"
+  },
+  "fileExtension": "json",
+  "group": "analysis",
+  "icon": "curlybraces",
+  "defaultName": {
+    "en": "data",
+    "zh-Hans": "数据"
+  },
+  "prompt": true,
+  "openAfterCreate": false,
+  "kind": "text"
+}

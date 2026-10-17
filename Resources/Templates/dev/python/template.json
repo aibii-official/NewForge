@@ -1,0 +1,18 @@
+{
+  "id": "dev.python",
+  "version": 1,
+  "name": {
+    "en": "Python Script",
+    "zh-Hans": "Python 脚本"
+  },
+  "fileExtension": "py",
+  "group": "dev",
+  "icon": "chevron.left.forwardslash.chevron.right",
+  "defaultName": {
+    "en": "script",
+    "zh-Hans": "脚本"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

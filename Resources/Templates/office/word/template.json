@@ -1,0 +1,18 @@
+{
+  "id": "office.word",
+  "version": 1,
+  "name": {
+    "en": "Word Document",
+    "zh-Hans": "Word 文档"
+  },
+  "fileExtension": "docx",
+  "group": "office",
+  "icon": "doc.text",
+  "defaultName": {
+    "en": "Untitled",
+    "zh-Hans": "未命名文档"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "binary"
+}

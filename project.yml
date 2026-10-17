@@ -1,0 +1,81 @@
+# XcodeGen project spec. Optional convenience for contributors who have
+# full Xcode + XcodeGen installed: `xcodegen` produces NewForge.xcodeproj
+# with proper schemes, actool asset compilation and signing settings.
+# The Makefile build does NOT need this file.
+
+name: NewForge
+options:
+  bundleIdPrefix: com.newforge
+  deploymentTarget:
+    macOS: "14.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+    GENERATE_INFOPLIST_FILE: false
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    Release:
+      SWIFT_COMPILATION_MODE: wholemodule
+
+packages: {}
+
+targets:
+  NewForgeKit:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/NewForgeKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.newforge.kit
+        INSTALL_PATH: "@executable_path/../Frameworks"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@loader_path/Frameworks"
+
+  NewForge:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/NewForgeApp
+      - path: Resources
+        excludes:
+          - "Templates/**"
+    dependencies:
+      - target: NewForgeKit
+      - target: NewForgeFinderExt
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.newforge.app
+        INFOPLIST_FILE: NewForge/NewForge-Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    copyFiles:
+      - sources:
+          - path: Resources/Templates
+        destination: resources
+
+  NewForgeFinderExt:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/NewForgeFinderExt
+    dependencies:
+      - target: NewForgeKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.newforge.app.finderext
+        INFOPLIST_FILE: NewForgeFinderExt/Info.plist
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../../../../Frameworks"
+          - "@executable_path/../../../../Frameworks/PlugIns"
+
+  NewForgeKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/NewForgeKitTests
+    dependencies:
+      - target: NewForgeKit

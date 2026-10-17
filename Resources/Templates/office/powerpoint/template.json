@@ -1,0 +1,18 @@
+{
+  "id": "office.powerpoint",
+  "version": 1,
+  "name": {
+    "en": "PowerPoint Presentation",
+    "zh-Hans": "PowerPoint 演示文稿"
+  },
+  "fileExtension": "pptx",
+  "group": "office",
+  "icon": "play.rectangle",
+  "defaultName": {
+    "en": "Untitled",
+    "zh-Hans": "未命名演示"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "binary"
+}

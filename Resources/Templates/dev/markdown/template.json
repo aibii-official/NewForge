@@ -1,0 +1,18 @@
+{
+  "id": "dev.markdown",
+  "version": 1,
+  "name": {
+    "en": "Markdown Note",
+    "zh-Hans": "Markdown 笔记"
+  },
+  "fileExtension": "md",
+  "group": "dev",
+  "icon": "doc.richtext",
+  "defaultName": {
+    "en": "note-{{date}}",
+    "zh-Hans": "笔记-{{date}}"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}

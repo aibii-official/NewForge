@@ -1,0 +1,18 @@
+{
+  "id": "dev.dockerfile",
+  "version": 1,
+  "name": {
+    "en": "Dockerfile",
+    "zh-Hans": "Dockerfile"
+  },
+  "fileExtension": "dockerfile",
+  "group": "dev",
+  "icon": "shippingbox",
+  "defaultName": {
+    "en": "Dockerfile",
+    "zh-Hans": "Dockerfile"
+  },
+  "prompt": false,
+  "openAfterCreate": true,
+  "kind": "text"
+}

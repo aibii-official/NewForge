@@ -1,0 +1,18 @@
+{
+  "id": "dev.gitignore",
+  "version": 1,
+  "name": {
+    "en": "Git Ignore (Python)",
+    "zh-Hans": "Git 忽略文件（Python）"
+  },
+  "fileExtension": "gitignore",
+  "group": "dev",
+  "icon": "eye.slash",
+  "defaultName": {
+    "en": ".gitignore",
+    "zh-Hans": ".gitignore"
+  },
+  "prompt": false,
+  "openAfterCreate": false,
+  "kind": "text"
+}

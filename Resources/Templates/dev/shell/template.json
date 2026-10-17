@@ -1,0 +1,18 @@
+{
+  "id": "dev.shell",
+  "version": 1,
+  "name": {
+    "en": "Shell Script",
+    "zh-Hans": "Shell 脚本"
+  },
+  "fileExtension": "sh",
+  "group": "dev",
+  "icon": "terminal",
+  "defaultName": {
+    "en": "script",
+    "zh-Hans": "脚本"
+  },
+  "prompt": true,
+  "openAfterCreate": true,
+  "kind": "text"
+}
