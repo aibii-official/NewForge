@@ -1,6 +1,7 @@
 import SwiftUI
 import NewForgeKit
 import Carbon
+import ServiceManagement
 
 @main
 struct NewForgeApp: App {
@@ -27,12 +28,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        registerLoginItem()
         NSAppleEventManager.shared().setEventHandler(
             self,
             andSelector: #selector(handleGetURLEvent(_:withReply:)),
             forEventClass: AEEventClass(kInternetEventClass),
             andEventID: AEEventID(kAEGetURL)
         )
+    }
+
+    /// Launch at login so the URL-scheme handler is always up when the
+    /// user right-clicks in Finder. SMAppService is the modern replacement
+    /// for the deprecated SMLoginItemSetEnabled.
+    private func registerLoginItem() {
+        do {
+            try SMAppService.mainApp.register()
+            NFLog.info("login item registered")
+        } catch {
+            // Common cause: user previously disabled it in System Settings
+            // > General > Login Items. Not fatal - just means we won't
+            // auto-launch.
+            NFLog.error("login item registration failed: \(error.localizedDescription)")
+        }
     }
 
     @objc private func handleGetURLEvent(_ event: NSAppleEventDescriptor,

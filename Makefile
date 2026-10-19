@@ -117,10 +117,25 @@ test: $(KIT) $(TESTSWIFTS)
 	  -o $(BUILD)/tests/runner
 	$(BUILD)/tests/runner
 
-install: $(APP)
-	cp -R $(APP) /Applications/NewForge.app
+# Install the Xcode-built product (which has proper signing and a
+# provisioning profile) rather than the ad-hoc Makefile build, so the
+# extension actually loads.
+install:
+	DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+	  /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
+	  -project NewForge.xcodeproj -scheme NewForge -configuration Release \
+	  -derivedDataPath build/DerivedData -allowProvisioningUpdates build
+	$(eval RELEASE_APP := build/DerivedData/Build/Products/Release/NewForge.app)
+	# Stop any running copy, replace /Applications, re-register, restart.
+	-killall NewForge 2>/dev/null
+	-killall Finder 2>/dev/null
+	rm -rf /Applications/NewForge.app
+	cp -R $(RELEASE_APP) /Applications/NewForge.app
 	$(PLUGINKIT) -f -R trusted /Applications/NewForge.app 2>/dev/null || true
-	@echo "Installed to /Applications/NewForge.app"
+	open /Applications/NewForge.app
+	@echo ""
+	@echo "Installed to /Applications/NewForge.app and launched."
+	@echo "The app registers itself as a login item on first launch."
 
 clean:
 	rm -rf $(BUILD)
