@@ -107,8 +107,13 @@ final class FinderSync: FIFinderSync {
                 // but `tag` survives. Keep both: tag is the primary key.
                 item.tag = templates.firstIndex(where: { $0.id == template.id }) ?? -1
                 item.representedObject = template.id
-                if let icon = template.descriptor.icon {
-                    item.image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
+                if let icon = template.descriptor.icon,
+                   let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
+                    item.image = image
+                } else {
+                    // Fall back to a generic icon when the template's SF
+                    // Symbol name doesn't exist on this macOS version.
+                    item.image = NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
                 }
                 submenu.addItem(item)
             }
