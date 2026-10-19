@@ -89,6 +89,23 @@ try test("uniquify appends counters") {
     expectEqual(second.lastPathComponent, "note 2.md")
 }
 
+test("dotfile template does not get a duplicate extension") {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("newforge-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    // The gitignore template has defaultName ".gitignore" and fileExtension
+    // "gitignore". The creator must not produce ".gitignore.gitignore".
+    let url = FileCreator.uniquifiedURL(for: ".gitignore", ext: "gitignore", in: tmp)
+    expectEqual(url.lastPathComponent, ".gitignore")
+
+    // A second invocation should still uniquify without doubling the ext.
+    FileManager.default.createFile(atPath: url.path, contents: Data())
+    let second = FileCreator.uniquifiedURL(for: ".gitignore", ext: "gitignore", in: tmp)
+    expectEqual(second.lastPathComponent, ".gitignore 2")
+}
+
 // MARK: - store + creator end to end
 
 func makeTemplateDir(_ base: URL, _ rel: String, _ json: String, _ content: String, _ contentName: String) throws {

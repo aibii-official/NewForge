@@ -13,6 +13,6 @@
     "zh-Hans": "数据"
   },
   "prompt": true,
-  "openAfterCreate": false,
+  "openAfterCreate": true,
   "kind": "text"
 }

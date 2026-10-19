@@ -13,6 +13,6 @@
     "zh-Hans": ".gitignore"
   },
   "prompt": false,
-  "openAfterCreate": false,
+  "openAfterCreate": true,
   "kind": "text"
 }

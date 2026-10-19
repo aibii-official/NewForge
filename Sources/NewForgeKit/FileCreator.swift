@@ -36,10 +36,14 @@ public enum FileCreator {
     /// Append " 2", " 3", ... to the base name until the candidate is free.
     public static func uniquifiedURL(for baseName: String, ext: String, in directory: URL,
                                      fileManager: FileManager = .default) -> URL {
-        var candidate = directory.appendingPathComponent("\(baseName).\(ext)")
+        // Templates whose default name already carries the extension
+        // (e.g. ".gitignore") must not get it appended twice.
+        let needsExt = !baseName.lowercased().hasSuffix(".\(ext.lowercased())")
+        let filename = needsExt ? "\(baseName).\(ext)" : baseName
+        var candidate = directory.appendingPathComponent(filename)
         var counter = 2
         while fileManager.fileExists(atPath: candidate.path) {
-            candidate = directory.appendingPathComponent("\(baseName) \(counter).\(ext)")
+            candidate = directory.appendingPathComponent(needsExt ? "\(baseName) \(counter).\(ext)" : "\(baseName) \(counter)")
             counter += 1
         }
         return candidate

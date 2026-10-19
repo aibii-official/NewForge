@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        seedUserTemplatesIfNeeded()
         registerLoginItem()
         NSAppleEventManager.shared().setEventHandler(
             self,
@@ -35,6 +36,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forEventClass: AEEventClass(kInternetEventClass),
             andEventID: AEEventID(kAEGetURL)
         )
+    }
+
+    /// The user-templates folder starts empty (built-in templates ship in
+    /// the app bundle). Copying them over on first launch lets the user
+    /// inspect, edit, or delete them from the menu bar's "Open Templates
+    /// Folder" action - which would otherwise open an empty directory and
+    /// look broken.
+    private func seedUserTemplatesIfNeeded() {
+        let userRoot = TemplateStore.defaultUserRoot()
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        // Only seed when the folder is missing or completely empty.
+        if fm.fileExists(atPath: userRoot.path, isDirectory: &isDir), isDir.boolValue,
+           let kids = try? fm.contentsOfDirectory(atPath: userRoot.path),
+           !kids.isEmpty {
+            return
+        }
+        guard let builtin = Bundle.main.resourceURL?.appendingPathComponent("Templates", isDirectory: true),
+              fm.fileExists(atPath: builtin.path) else { return }
+        do {
+            try fm.createDirectory(at: userRoot, withIntermediateDirectories: true)
+            let groups = try fm.contentsOfDirectory(at: builtin, includingPropertiesForKeys: nil)
+            for group in groups where group.hasDirectoryPath {
+                let dest = userRoot.appendingPathComponent(group.lastPathComponent, isDirectory: true)
+                try fm.copyItem(at: group, to: dest)
+            }
+            NFLog.info("seeded user templates into \(userRoot.path)")
+        } catch {
+            NFLog.error("failed to seed user templates: \(error.localizedDescription)")
+        }
     }
 
     /// Launch at login so the URL-scheme handler is always up when the
