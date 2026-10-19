@@ -97,11 +97,34 @@ Two build details the Makefile handles that are easy to get wrong by hand:
 - Templates are plain folders: `template.json` (leniently decoded) plus a
   content file. Loading never fails globally — per-template errors are
   collected and surfaced in Preferences.
-- Settings live in `UserDefaults.standard`; the app posts a Darwin
-  notification (`com.newforge.app.settingsChanged`) after saving, and the
-  extension reloads before building its menu.
+- Settings live in the **shared app-group suite** (`group.com.newforge`),
+  declared in both `*.entitlements` via `$(AppGroup)`. Sandboxed app and
+  sandboxed extension each have a private defaults domain, so
+  `UserDefaults.standard` would silently split settings in two. The app
+  posts a Darwin notification (`com.newforge.app.settingsChanged`) after
+  saving, and the extension reloads before building its menu.
+- User templates live in the same group container
+  (`TemplateStore.defaultUserRoot()`); the extension's own
+  `~/Library/Application Support` resolves inside its private container
+  and is never shared with the app.
 - Modifier keys are read in `menu(for:)` via `NSEvent.modifierFlags`:
   Option forces the naming panel, Control forces silent creation.
+- All diagnostic output goes through `os_log` with subsystem
+  `com.newforge.app` (`NFLog` in NewForgeKit). `NSLog` output from
+  sandboxed extensions is data-protected and invisible in `log show`,
+  which used to make failures look like "the click did nothing".
+  Inspect with:
+  `log show --last 5m --predicate 'subsystem == "com.newforge.app"'`
+- The naming panel is a plain `NSPanel`; inside an appex the activation
+  policy starts as `.prohibited`, so `makeKeyAndOrderFront` no-ops. The
+  extension switches to `.accessory` before showing the panel.
+- File writes go through a **Mach service helper** (the main app):
+  the extension stages the fully-rendered file inside its own container
+  (`Library/Caches/com.newforge.staging`) and hands the path to
+  `com.newforge.app.creation`. The app, which is deliberately *not*
+  sandboxed, copies it into the requested folder and returns the final
+  URL. This is how we get "any folder works after the app is running"
+  without asking the user to grant per-folder access.
 
 ## Tests
 

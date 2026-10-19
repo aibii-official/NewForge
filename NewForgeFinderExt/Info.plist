@@ -27,7 +27,9 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.FinderSync</string>
 		<key>NSExtensionPrincipalClass</key>
-		<string>NewForgeFinderExt.FinderSync</string>
+		<string>FinderSync</string>
 	</dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>NewForge asks Finder to place the staged new file into the folder you right-clicked.</string>
 </dict>
 </plist>

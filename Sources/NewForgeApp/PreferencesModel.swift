@@ -27,6 +27,7 @@ final class PreferencesModel: ObservableObject {
         loadErrors = result.errors
     }
 
+
     func isEnabled(_ template: Template) -> Bool {
         !settings.disabledIDs.contains(template.id)
     }

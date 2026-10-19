@@ -1,5 +1,6 @@
 import SwiftUI
 import NewForgeKit
+import Carbon
 
 @main
 struct NewForgeApp: App {
@@ -22,8 +23,23 @@ struct NewForgeApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let placementHandler = PlacementHandler()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleGetURLEvent(_:withReply:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
+
+    @objc private func handleGetURLEvent(_ event: NSAppleEventDescriptor,
+                                         withReply reply: NSAppleEventDescriptor) {
+        guard let urlString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: urlString) else { return }
+        placementHandler.handle(url)
     }
 }
 

@@ -106,6 +106,7 @@ struct PreferencesView: View {
                 Toggle(NSLocalizedString("prefs.autoOpen", value: "Open file after creation", comment: ""),
                        isOn: $model.settings.autoOpen)
             }
+
         }
         .formStyle(.grouped)
     }

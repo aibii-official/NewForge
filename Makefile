@@ -62,6 +62,11 @@ $(EXTEXE): $(KIT) $(EXTSWIFTS) NewForgeFinderExt/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundlePackageType XPC!" $(EXT)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleName NewForgeFinderExt" $(EXT)/Contents/Info.plist
 	@/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" $(EXT)/Contents/Info.plist
+	# Templates ship inside the appex: the sandboxed extension cannot read
+	# them from the host app's Resources.
+	cp -R Resources/Templates $(EXT)/Contents/Resources/Templates
+	cp -R Resources/en.lproj $(EXT)/Contents/Resources/ 2>/dev/null || true
+	cp -R Resources/zh-Hans.lproj $(EXT)/Contents/Resources/ 2>/dev/null || true
 	codesign --force --sign - $(EXT) 2>/dev/null || true
 
 # ---------- Container app ----------

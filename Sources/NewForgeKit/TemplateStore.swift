@@ -22,9 +22,18 @@ public final class TemplateStore {
         self.userRoot = userRoot
     }
 
-    /// Default user-writable template root. Kept in a plain directory (no
-    /// sandbox container) so the extension can reach it too.
+    /// Default user-writable template root. The extension is sandboxed and
+    /// its `~/Library/Application Support` resolves inside its own private
+    /// container, so a plain path is NOT shared with the app. The custom
+    /// URL scheme the app exposes (see PlacementHandler) lets the extension
+    /// ask the app to place files; for templates we instead read from the
+    /// user's real Application Support via a security-scoped bookmark that
+    /// the user grants the first time they open the Templates folder from
+    /// the menu bar.
     public static func defaultUserRoot(fileManager: FileManager = .default) -> URL {
+        // Sandboxed appex: containerURL(forSecurityApplicationGroupIdentifier:)
+        // would return a path we cannot actually write to because the free
+        // provisioning profile drops the entitlement. Skip it entirely.
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
         return base.appendingPathComponent("NewForge/Templates", isDirectory: true)
@@ -35,27 +44,50 @@ public final class TemplateStore {
         var byID: [String: Template] = [:]
         var order: [String] = []
 
+        // The group container is provisioned lazily; until the user drops a
+        // template in, the directory legitimately does not exist. Create it
+        // so a missing folder is not reported as an error.
+        try? fileManager.createDirectory(at: userRoot, withIntermediateDirectories: true)
+
         for (root, origin) in [(builtinRoot, "builtin"), (userRoot, "user")] {
+            NFLog.info("loading templates from \(root.path) (origin=\(origin))")
             guard let children = try? fileManager.contentsOfDirectory(
                 at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-            ) else { continue }
+            ) else {
+                // A missing user root is expected on a fresh install - the
+                // group container is created lazily and the sandboxed
+                // extension may not be allowed to mkdir it. Treat as empty.
+                if !fileManager.fileExists(atPath: root.path) {
+                    NFLog.info("directory does not exist yet, skipping: \(root.path)")
+                } else {
+                    NFLog.error("cannot read directory \(root.path)")
+                }
+                continue
+            }
+            NFLog.info("found \(children.count) children in \(root.path)")
 
             for groupDir in children where groupDir.hasDirectoryPath {
                 guard let dirs = try? fileManager.contentsOfDirectory(
                     at: groupDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-                ) else { continue }
+                ) else {
+                    NFLog.error("cannot read group dir \(groupDir.path)")
+                    continue
+                }
                 for dir in dirs where dir.hasDirectoryPath {
                     switch Self.loadTemplate(at: dir, origin: origin) {
                     case .success(let template):
                         if byID[template.id] == nil { order.append(template.id) }
                         byID[template.id] = template   // later roots override
+                        NFLog.info("loaded template \(template.id)")
                     case .failure(let error):
                         errors.append("\(dir.lastPathComponent): \(error.localizedDescription)")
+                        NFLog.error("failed to load \(dir.lastPathComponent): \(error.localizedDescription)")
                     }
                 }
             }
         }
 
+        NFLog.info("total \(byID.count) templates loaded, \(errors.count) errors")
         // Stable menu order: fixed group order first, then declaration order.
         let groupOrder = ["office", "analysis", "dev", "web", "misc", "other"]
         let templates = order.compactMap { byID[$0] }.sorted { a, b in

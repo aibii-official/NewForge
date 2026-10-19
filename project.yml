@@ -12,13 +12,21 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    CODE_SIGN_STYLE: Automatic
     GENERATE_INFOPLIST_FILE: false
+    # Substituted into $(AppGroup) in both entitlements files, so app and
+    # extension always share the same group container.
+    AppGroup: group.com.newforge
+    # Single team for every target - a stale id here fails the whole build
+    # with "entitlements require signing with a development certificate".
+    DEVELOPMENT_TEAM: YBTZ43G374
   configs:
     Debug:
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+      CODE_SIGN_STYLE: Automatic
+      CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     Release:
       SWIFT_COMPILATION_MODE: wholemodule
+      CODE_SIGN_STYLE: Automatic
 
 packages: {}
 
@@ -31,6 +39,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.newforge.kit
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
         INSTALL_PATH: "@executable_path/../Frameworks"
         LD_RUNPATH_SEARCH_PATHS:
           - "@loader_path/Frameworks"
@@ -47,27 +57,52 @@ targets:
       - target: NewForgeKit
       - target: NewForgeFinderExt
         embed: true
+    postBuildScripts:
+      - name: Copy Templates
+        script: |
+          cp -R "${SRCROOT}/Resources/Templates" "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Templates"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.newforge.app
         INFOPLIST_FILE: NewForge/NewForge-Info.plist
+        CODE_SIGN_ENTITLEMENTS: NewForge/NewForge.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    copyFiles:
-      - sources:
-          - path: Resources/Templates
-        destination: resources
-
   NewForgeFinderExt:
     type: app-extension
     platform: macOS
     sources:
       - path: Sources/NewForgeFinderExt
+      # Bundle the templates as real target resources. The previous
+      # post-build `cp` script wrote to ${BUILT_PRODUCTS_DIR} which resolves
+      # to the *shared* products dir, not the appex bundle - the appex was
+      # shipped with an empty Resources/ and no templates at all.
+      - path: Resources/Templates
+        buildPhase: resources
+        type: folder
+      - path: Resources/en.lproj
+        buildPhase: resources
+        type: folder
+        optional: true
+      - path: Resources/zh-Hans.lproj
+        buildPhase: resources
+        type: folder
+        optional: true
     dependencies:
       - target: NewForgeKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.newforge.app.finderext
         INFOPLIST_FILE: NewForgeFinderExt/Info.plist
+        CODE_SIGN_ENTITLEMENTS: NewForgeFinderExt/NewForgeFinderExt.entitlements
+        ENABLE_DEBUG_DYLIB: NO
+        EXPORTED_SYMBOLS_FILE: NewForgeFinderExt/exported_symbols.txt
+        OTHER_LDFLAGS:
+          - "-Xlinker"
+          - "-exported_symbol"
+          - "-Xlinker"
+          - "_OBJC_CLASS_$$_FinderSync"
+        SWIFT_FORCE_DYNAMIC_LINKING: NO
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../../../../Frameworks"
           - "@executable_path/../../../../Frameworks/PlugIns"

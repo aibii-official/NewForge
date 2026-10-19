@@ -58,12 +58,8 @@ public struct Template {
     }
 
     static func pick(_ dict: [String: String], locale: Locale) -> String? {
-        let code: String
-        if #available(macOS 13, *) {
-            code = locale.language.languageCode?.identifier ?? "en"
-        } else {
-            code = locale.languageCode ?? "en"
-        }
+        // Deployment target is macOS 14, so Locale.Language is always there.
+        let code = locale.language.languageCode?.identifier ?? "en"
         if code.hasPrefix("zh") {
             return dict["zh-Hans"] ?? dict["zh"] ?? dict["en"] ?? dict.values.first
         }

@@ -11,6 +11,7 @@ import NewForgeKit
 /// - honor the modifier flags: Option forces the naming panel, Control
 ///   forces silent creation
 /// - create the file, reveal it in Finder and optionally open it
+@objc(FinderSync)
 final class FinderSync: FIFinderSync {
 
     private var templates: [Template] = []
@@ -21,15 +22,23 @@ final class FinderSync: FIFinderSync {
         let builtin = Bundle.main.resourceURL?
             .appendingPathComponent("Templates", isDirectory: true)
             ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Templates", isDirectory: true)
-        return TemplateStore(builtinRoot: builtin, userRoot: TemplateStore.defaultUserRoot())
+        NFLog.info("builtin templates at \(builtin.path)")
+        // Sandbox: Application Support resolves inside THIS extension's
+        // private container, so the app could never share templates through
+        // it. Use the app group container instead (shared with the app).
+        let userRoot = TemplateStore.defaultUserRoot()
+        NFLog.info("user templates at \(userRoot.path)")
+        return TemplateStore(builtinRoot: builtin, userRoot: userRoot)
     }()
 
     override init() {
         super.init()
+        NFLog.info("FinderSync extension initialized")
 
         // Claim everything: menu should appear in every folder, on the
         // desktop and on background right-clicks.
         FIFinderSyncController.default().directoryURLs = [URL(fileURLWithPath: "/")]
+        NFLog.info("claimed directoryURLs = /")
 
         reloadState()
 
@@ -54,20 +63,27 @@ final class FinderSync: FIFinderSync {
         let result = store.load()
         templates = result.templates
         if !result.errors.isEmpty {
-            NSLog("NewForge: template load errors: %@", result.errors.joined(separator: "; "))
+            NFLog.error("template load errors: \(result.errors.joined(separator: "; "))")
         }
+    }
+
+    // MARK: - NSExtensionRequestHandling
+
+    /// Required by NSExtensionRequestHandling. Called when the extension is
+    /// asked to handle a request from the host (Finder).
+    override func beginRequest(with context: NSExtensionContext) {
+        NFLog.info("beginRequest with context \(context)")
     }
 
     // MARK: - Menu
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
+        NFLog.info("menu(for: \(menuKind.rawValue)) called")
         let menu = NSMenu(title: "")
 
         let rootTitle = NSLocalizedString("menu.root", value: "New File", comment: "Root menu title")
         let rootItem = NSMenuItem(title: rootTitle, action: nil, keyEquivalent: "")
-        if #available(macOS 11.0, *) {
-            rootItem.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: nil)
-        }
+        rootItem.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: nil)
 
         let submenu = NSMenu(title: rootTitle)
         let enabled = templates.filter { !settings.disabledIDs.contains($0.id) }
@@ -85,9 +101,13 @@ final class FinderSync: FIFinderSync {
                     action: #selector(createFromTemplate(_:)),
                     keyEquivalent: "")
                 item.target = self
+                // Finder dispatches the action on a *copy* of the menu item
+                // it re-materializes from our returned menu. On macOS 26/27
+                // that copy loses `representedObject` (it arrives as nil),
+                // but `tag` survives. Keep both: tag is the primary key.
+                item.tag = templates.firstIndex(where: { $0.id == template.id }) ?? -1
                 item.representedObject = template.id
-                item.tag = templates.firstIndex(where: { $0.id == template.id }) ?? 0
-                if #available(macOS 11.0, *), let icon = template.descriptor.icon {
+                if let icon = template.descriptor.icon {
                     item.image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
                 }
                 submenu.addItem(item)
@@ -101,10 +121,6 @@ final class FinderSync: FIFinderSync {
                     comment: "Modifier hint, disabled item"),
                 action: nil, keyEquivalent: "")
             hint.isEnabled = false
-            if #available(macOS 14.0, *) {
-                // Section headers render as small gray captions.
-                submenu.addItem(.sectionHeader(title: ""))
-            }
             submenu.addItem(hint)
         }
 
@@ -134,25 +150,36 @@ final class FinderSync: FIFinderSync {
     // MARK: - Action
 
     @objc private func createFromTemplate(_ sender: NSMenuItem) {
+        let templateID = (sender.representedObject as? String)
+            ?? (sender.tag >= 0 && sender.tag < templates.count ? templates[sender.tag].id : nil)
+        NFLog.info("createFromTemplate: representedObject=\(sender.representedObject as? String ?? "nil") tag=\(sender.tag) resolved=\(templateID ?? "nil")")
         reloadState()   // pick up any template edits since the menu opened
-        guard let template = templates.first(where: { $0.id == sender.representedObject as? String }) else {
+        guard let templateID, let template = templates.first(where: { $0.id == templateID }) else {
+            NFLog.error("template not found (tag=\(sender.tag), representedObject=\(sender.representedObject as? String ?? "nil"))")
             return
         }
+        NFLog.info("found template \(template.id)")
         guard let directory = targetDirectory() else {
+            NFLog.error("no target directory - targetedURL and selectedItemURLs both nil")
             NSSound.beep()
             return
         }
+        NFLog.info("target directory \(directory.path)")
 
         switch effectiveNamingPolicy(for: template) {
         case .prompt:
+            NFLog.info("presenting name panel")
             presentNamePanel(for: template, in: directory)
         case .silent:
+            NFLog.info("silent create")
             let base = FileCreator.defaultBaseName(for: template, directory: directory)
             create(template, baseName: base, in: directory)
         case .smart:
             if template.descriptor.prompt {
+                NFLog.info("smart prompt")
                 presentNamePanel(for: template, in: directory)
             } else {
+                NFLog.info("smart silent")
                 let base = FileCreator.defaultBaseName(for: template, directory: directory)
                 create(template, baseName: base, in: directory)
             }
@@ -173,6 +200,22 @@ final class FinderSync: FIFinderSync {
     }
 
     private func presentNamePanel(for template: Template, in directory: URL) {
+        // NOTE on activation policy: FIFinderSync runs our selector on its
+        // own XPC callback thread. NSApp.setActivationPolicy + window work
+        // is not main-thread-safe there and FIFinderSync catches the
+        // resulting NSException, silently swallowing our whole action
+        // (we saw this as "caught an exception while executing selector").
+        // Hop to the main thread for any UI work.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { self.presentNamePanel(for: template, in: directory) }
+            return
+        }
+        // Inside a sandboxed appex NSApp starts with the .prohibited
+        // activation policy: makeKeyAndOrderFront silently no-ops, so the
+        // naming panel would never appear (and its completion would never
+        // fire, which looks exactly like "the click did nothing"). Switching
+        // to .accessory makes the window server actually show it.
+        NSApp.setActivationPolicy(.accessory)
         let panel = NamePanelController()
         self.namePanel = panel   // retain for the panel's lifetime
         let request = NamePanelController.Request(
@@ -189,23 +232,55 @@ final class FinderSync: FIFinderSync {
     }
 
     private func create(_ template: Template, baseName: String, in directory: URL) {
-        do {
-            let url = try FileCreator.create(from: template, baseName: baseName, in: directory)
-            NSWorkspace.shared.activateFileViewerSelecting([url])
-            if settings.autoOpen, template.descriptor.openAfterCreate {
-                if #available(macOS 10.15, *) {
-                    NSWorkspace.shared.open(url)
-                } else {
-                    NSWorkspace.shared.openFile(url.path)
-                }
-            }
-        } catch {
-            let alert = NSAlert()
-            alert.messageText = NSLocalizedString("alert.createFailed",
-                value: "Could Not Create File", comment: "")
-            alert.informativeText = error.localizedDescription
-            alert.alertStyle = .warning
-            alert.runModal()
+        // Same reason as in presentNamePanel: run on the main thread.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { self.create(template, baseName: baseName, in: directory) }
+            return
         }
+        NFLog.info("creating \(baseName) in \(directory.path)")
+        do {
+            // Make sure the host app is running so its Mach service is up.
+            // openApplication(at:configuration:) is async; we only kick it
+            // off here and rely on the placement call below for the real
+            // work. No artificial sleep needed.
+            if let appURL = hostAppURL() {
+                NSWorkspace.shared.openApplication(at: appURL,
+                                                   configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+            }
+
+            // Primary path: stage inside the sandbox container, then ask
+            // the (unsandboxed) app to place the file. `autoOpen` is handled
+            // by the app side - the sandboxed extension calling
+            // NSWorkspace.open() would be blocked by TCC.
+            let autoOpen = settings.autoOpen && template.descriptor.openAfterCreate
+            if let url = try FinderPlacement.place(from: template,
+                                                   baseName: baseName,
+                                                   in: directory,
+                                                   autoOpen: autoOpen) {
+                NFLog.info("created at \(url.path)")
+                return
+            }
+            // Fallback: direct write. Succeeds only if the extension already
+            // holds security scope for the target (e.g. user granted access
+            // in Preferences before).
+            let url = try FileCreator.create(from: template, baseName: baseName, in: directory)
+            NFLog.info("created at \(url.path)")
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            // An NSAlert cannot be presented from a sandboxed extension in
+            // most cases, so the error log below is the primary signal:
+            //   log show --last 5m --predicate 'subsystem == "com.newforge.app"'
+            NFLog.error("create failed for \(baseName).\(template.fileExtension) in \(directory.path): \(error.localizedDescription)")
+            NSSound.beep()
+        }
+    }
+
+    private func hostAppURL() -> URL? {
+        // appex is at <app>/Contents/PlugIns/<ext>.appex
+        let bundle = Bundle.main.bundleURL
+        guard bundle.pathExtension == "appex" else { return nil }
+        return bundle.deletingLastPathComponent()   // PlugIns/
+                     .deletingLastPathComponent()   // Contents/
+                     .deletingLastPathComponent()   // <app>
     }
 }

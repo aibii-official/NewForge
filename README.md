@@ -14,6 +14,7 @@ Windows 风格的「右键 → 新建文件」，为 macOS 访达而生。A Find
   - 前端：HTML / CSS / TypeScript / React 组件
   - 其他：纯文本 / .env
 - **模板可扩展**：模板就是一个文件夹（`template.json` + 内容文件），丢进 `~/Library/Application Support/NewForge/Templates/<分组>/<模板名>/` 即生效；同 id 覆盖内置模板
+  > 注意：App 与扩展都开启沙盒后，模板实际放在**共享 App Group 容器**里（`~/Library/Group Containers/group.com.newforge/Templates/`)。菜单栏「打开模板文件夹」会自动定位到正确位置，无需手动记路径。
 - **变量插值**：文本模板支持 `{{filename}}` `{{date}}` `{{datetime}}` `{{user}}` `{{dirname}}` 等占位符
 - **命名控制**：
   - 默认「智能」模式：脚本类弹命名框，文档类静默创建并自动编号
@@ -31,6 +32,12 @@ make run      # 构建并启动 NewForge.app
 然后：**系统设置 → 隐私与安全性 → 扩展 → Finder 扩展**，勾选「NewForge」。在访达里右键即可看到「新建文件」。
 
 > **注意**：Gatekeeper 会拒绝 ad-hoc 签名的扩展（`spctl` 返回 `rejected`），所以扩展不会出现在扩展列表中。要真正启用，需用免费的 Apple Developer Team 签名——见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#signing-caveat-important)。`make` 构建仍可用于验证逻辑（`make test`）。
+
+点击菜单项没有反应时，先看扩展日志（全部经 `os_log` 输出，不会被系统隐藏）：
+
+```bash
+log show --last 5m --predicate 'subsystem == "com.newforge.app"'
+```
 
 其他常用命令：
 

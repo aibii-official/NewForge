@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		The main app is NOT sandboxed: it is the write-helper for the
+		sandboxed Finder extension. Sandboxing the app would defeat the
+		purpose, since it would be subject to the same per-folder
+		restrictions as the extension.
+
+		App Groups are NOT used: the free personal provisioning profile
+		doesn't include com.apple.security.application-groups, so the
+		group container is never actually granted (writes fail with
+		EPERM). Communication between extension and app uses a custom
+		URL scheme instead (see FinderPlacement / PlacementHandler).
+	-->
+</dict>
+</plist>
