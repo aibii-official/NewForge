@@ -19,7 +19,7 @@ import NewForgeKit
 // symbol is visible to the ObjC runtime. The Info.plist uses
 // $(PRODUCT_MODULE_NAME).FinderSync which Swift resolves to the same class.
 @objc(FinderSync)
-public final class FinderSync: FIFinderSync {
+public final class FinderSync: FIFinderSync, NSMenuDelegate {
 
     private var templates: [Template] = []
     private var settings = Settings()
@@ -116,8 +116,6 @@ public final class FinderSync: FIFinderSync {
                 // but `tag` survives. Keep both: tag is the primary key.
                 item.tag = templates.firstIndex(where: { $0.id == template.id }) ?? -1
                 item.representedObject = template.id
-                item.keyEquivalent = "\r"
-                item.keyEquivalentModifierMask = []
                 if let icon = template.descriptor.icon,
                    let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
                     item.image = image
@@ -127,29 +125,6 @@ public final class FinderSync: FIFinderSync {
                     item.image = NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
                 }
                 submenu.addItem(item)
-
-                // AppKit requires an alternate item to share the base item's key
-                // equivalent, then differ only by modifier mask. Without that
-                // pairing, Finder Sync renders all variants as normal rows.
-                let alternate = item.copy() as! NSMenuItem
-                alternate.title = menuTitle(
-                    for: template,
-                    modifiers: [.option]
-                )
-                alternate.isAlternate = true
-                alternate.keyEquivalent = item.keyEquivalent
-                alternate.keyEquivalentModifierMask = [.option]
-                submenu.addItem(alternate)
-
-                let instant = item.copy() as! NSMenuItem
-                instant.title = menuTitle(
-                    for: template,
-                    modifiers: [.control]
-                )
-                instant.isAlternate = true
-                instant.keyEquivalent = item.keyEquivalent
-                instant.keyEquivalentModifierMask = [.control]
-                submenu.addItem(instant)
             }
 
             // Modifier hint, like Finder's own alternative items.
@@ -164,8 +139,21 @@ public final class FinderSync: FIFinderSync {
         }
 
         rootItem.submenu = submenu
+        submenu.delegate = self
         menu.addItem(rootItem)
         return menu
+    }
+
+    // Finder re-invokes this while tracking the submenu. Updating titles in
+    // place is safe here; we never add or remove items while the menu is open.
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        for item in menu.items {
+            guard item.tag >= 0,
+                  item.tag < templates.count,
+                  item.action == #selector(createFromTemplate(_:)) else { continue }
+            let template = templates[item.tag]
+            item.title = menuTitle(for: template, modifiers: NSEvent.modifierFlags)
+        }
     }
 
     private func menuTitle(for template: Template) -> String {
