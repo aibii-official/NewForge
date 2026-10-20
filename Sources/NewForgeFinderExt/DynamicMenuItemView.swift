@@ -14,6 +14,7 @@ final class DynamicMenuItemView: NSView {
     private let iconView = NSImageView()
     private let titleLabel = NSTextField(labelWithString: "")
     private var timer: Timer?
+    private var modifierMonitor: Any?
 
     init(normalTitle: String,
          promptTitle: String,
@@ -103,11 +104,22 @@ final class DynamicMenuItemView: NSView {
         RunLoop.main.add(timer, forMode: .default)
         RunLoop.main.add(timer, forMode: .eventTracking)
         self.timer = timer
+
+        // AppKit does not always service timers in menu-tracking mode across
+        // process boundaries. Global modifier monitors remain active while
+        // Finder tracks the submenu and provide an immediate redraw trigger.
+        modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] _ in
+            self?.updateTitle()
+        }
     }
 
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+        if let modifierMonitor {
+            NSEvent.removeMonitor(modifierMonitor)
+            self.modifierMonitor = nil
+        }
     }
 
     var currentTitle: String {
