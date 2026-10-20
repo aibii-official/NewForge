@@ -116,6 +116,8 @@ public final class FinderSync: FIFinderSync {
                 // but `tag` survives. Keep both: tag is the primary key.
                 item.tag = templates.firstIndex(where: { $0.id == template.id }) ?? -1
                 item.representedObject = template.id
+                item.keyEquivalent = "\r"
+                item.keyEquivalentModifierMask = []
                 if let icon = template.descriptor.icon,
                    let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
                     item.image = image
@@ -126,16 +128,16 @@ public final class FinderSync: FIFinderSync {
                 }
                 submenu.addItem(item)
 
-                // AppKit swaps an alternate item in while its modifier mask
-                // is held. The same tag and action keep the identity intact;
-                // only the title changes to match the actual naming policy.
+                // AppKit requires an alternate item to share the base item's key
+                // equivalent, then differ only by modifier mask. Without that
+                // pairing, Finder Sync renders all variants as normal rows.
                 let alternate = item.copy() as! NSMenuItem
                 alternate.title = menuTitle(
                     for: template,
                     modifiers: [.option]
                 )
                 alternate.isAlternate = true
-                alternate.keyEquivalent = "\r"
+                alternate.keyEquivalent = item.keyEquivalent
                 alternate.keyEquivalentModifierMask = [.option]
                 submenu.addItem(alternate)
 
@@ -145,7 +147,7 @@ public final class FinderSync: FIFinderSync {
                     modifiers: [.control]
                 )
                 instant.isAlternate = true
-                instant.keyEquivalent = "\r"
+                instant.keyEquivalent = item.keyEquivalent
                 instant.keyEquivalentModifierMask = [.control]
                 submenu.addItem(instant)
             }
