@@ -186,23 +186,30 @@ private struct TemplateRow: View {
     let onToggle: (Bool) -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            Toggle(isOn: Binding(get: { enabled }, set: onToggle)) {
-                HStack(spacing: 8) {
-                    if let icon = template.descriptor.icon {
-                        Image(systemName: icon)
-                            .frame(width: 18)
-                            .foregroundColor(.accentColor)
-                    }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(template.localizedName())
-                        Text(".\(template.fileExtension)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.13))
+                    .frame(width: 30, height: 30)
+                Image(systemName: template.descriptor.icon ?? "doc")
+                    .font(.system(size: 14, weight: .medium))
+                    .imageScale(.medium)
+                    .foregroundStyle(Color.accentColor)
             }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(template.localizedName())
+                Text(".\(template.fileExtension)")
+                    .font(.caption)
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+            }
+
             Spacer()
+            Toggle("", isOn: Binding(get: { enabled }, set: onToggle))
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .controlSize(.small)
             if origin == "user" {
                 Text(NSLocalizedString("prefs.badge.custom", value: "Custom", comment: ""))
                     .font(.caption2)

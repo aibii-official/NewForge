@@ -105,7 +105,7 @@ public final class FinderSync: FIFinderSync {
             submenu.addItem(empty)
         } else {
             for template in enabled {
-                let item = NSMenuItem(
+                var item = NSMenuItem(
                     title: menuTitle(for: template),
                     action: #selector(createFromTemplate(_:)),
                     keyEquivalent: "")
@@ -125,6 +125,29 @@ public final class FinderSync: FIFinderSync {
                     item.image = NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
                 }
                 submenu.addItem(item)
+
+                // AppKit swaps an alternate item in while its modifier mask
+                // is held. The same tag and action keep the identity intact;
+                // only the title changes to match the actual naming policy.
+                var alternate = item
+                alternate.title = menuTitle(
+                    for: template,
+                    modifiers: [.option]
+                )
+                alternate.isAlternate = true
+                alternate.keyEquivalent = "\r"
+                alternate.keyEquivalentModifierMask = [.option]
+                submenu.addItem(alternate)
+
+                var instant = item
+                instant.title = menuTitle(
+                    for: template,
+                    modifiers: [.control]
+                )
+                instant.isAlternate = true
+                instant.keyEquivalent = "\r"
+                instant.keyEquivalentModifierMask = [.control]
+                submenu.addItem(instant)
             }
 
             // Modifier hint, like Finder's own alternative items.
@@ -144,8 +167,12 @@ public final class FinderSync: FIFinderSync {
     }
 
     private func menuTitle(for template: Template) -> String {
+        menuTitle(for: template, modifiers: NSEvent.modifierFlags)
+    }
+
+    private func menuTitle(for template: Template, modifiers: NSEvent.ModifierFlags) -> String {
         let name = template.localizedName()
-        if shouldPrompt(for: template) {
+        if shouldPrompt(for: template, modifiers: modifiers) {
             return String(format: NSLocalizedString("menu.item.prompt",
                 value: "%@\u{2026}", comment: "Item that will ask for a name"), name)
         }
@@ -155,16 +182,19 @@ public final class FinderSync: FIFinderSync {
     /// One source of truth for smart naming, used both to decorate the menu
     /// ("..." means this item will present a naming panel) and to dispatch
     /// the action. This prevents the icon and behavior from diverging.
-    private func shouldPrompt(for template: Template) -> Bool {
-        switch effectiveNamingPolicy(for: template) {
+    private func shouldPrompt(for template: Template, modifiers: NSEvent.ModifierFlags) -> Bool {
+        switch effectiveNamingPolicy(for: template, modifiers: modifiers) {
         case .prompt: return true
         case .silent: return false
         case .smart:  return template.usesFilenameAsData
         }
     }
 
-    private func effectiveNamingPolicy(for template: Template) -> Settings.NamingPolicy {
-        let flags = NSEvent.modifierFlags
+    private func effectiveNamingPolicy(
+        for template: Template,
+        modifiers: NSEvent.ModifierFlags = NSEvent.modifierFlags
+    ) -> Settings.NamingPolicy {
+        let flags = modifiers
         if flags.contains(.control) { return .silent }
         if flags.contains(.option) { return .prompt }
         return settings.namingPolicy
@@ -189,7 +219,7 @@ public final class FinderSync: FIFinderSync {
         }
         NFLog.info("target directory \(directory.path)")
 
-        if shouldPrompt(for: template) {
+        if shouldPrompt(for: template, modifiers: NSEvent.modifierFlags) {
             NFLog.info("presenting name panel")
             presentNamePanel(for: template, in: directory)
         } else {
