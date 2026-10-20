@@ -129,7 +129,7 @@ public final class FinderSync: FIFinderSync {
                 // AppKit swaps an alternate item in while its modifier mask
                 // is held. The same tag and action keep the identity intact;
                 // only the title changes to match the actual naming policy.
-                var alternate = item
+                let alternate = item.copy() as! NSMenuItem
                 alternate.title = menuTitle(
                     for: template,
                     modifiers: [.option]
@@ -139,7 +139,7 @@ public final class FinderSync: FIFinderSync {
                 alternate.keyEquivalentModifierMask = [.option]
                 submenu.addItem(alternate)
 
-                var instant = item
+                let instant = item.copy() as! NSMenuItem
                 instant.title = menuTitle(
                     for: template,
                     modifiers: [.control]
