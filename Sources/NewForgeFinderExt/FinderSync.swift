@@ -19,7 +19,7 @@ import NewForgeKit
 // symbol is visible to the ObjC runtime. The Info.plist uses
 // $(PRODUCT_MODULE_NAME).FinderSync which Swift resolves to the same class.
 @objc(FinderSync)
-public final class FinderSync: FIFinderSync, NSMenuDelegate {
+public final class FinderSync: FIFinderSync {
 
     private var templates: [Template] = []
     private var settings = Settings()
@@ -105,25 +105,31 @@ public final class FinderSync: FIFinderSync, NSMenuDelegate {
             submenu.addItem(empty)
         } else {
             for template in enabled {
-                var item = NSMenuItem(
-                    title: menuTitle(for: template),
-                    action: #selector(createFromTemplate(_:)),
-                    keyEquivalent: "")
+                let templateIndex = templates.firstIndex(where: { $0.id == template.id }) ?? -1
+                let iconName = template.descriptor.icon
+                let image = iconName.flatMap {
+                    NSImage(systemSymbolName: $0, accessibilityDescription: nil)
+                } ?? NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
+
+                // A custom view is the only mechanism Finder Sync reliably
+                // keeps tracking while modifier keys are held.
+                let view = DynamicMenuItemView(
+                    normalTitle: menuTitle(for: template, modifiers: []),
+                    promptTitle: menuTitle(for: template, modifiers: [.option]),
+                    plainTitle: menuTitle(for: template, modifiers: [.control]),
+                    iconImage: image
+                )
+                let item = NSMenuItem(title: view.currentTitle,
+                                      action: #selector(createFromTemplate(_:)),
+                                      keyEquivalent: "")
+                item.view = view
                 item.target = self
                 // Finder dispatches the action on a *copy* of the menu item
                 // it re-materializes from our returned menu. On macOS 26/27
                 // that copy loses `representedObject` (it arrives as nil),
                 // but `tag` survives. Keep both: tag is the primary key.
-                item.tag = templates.firstIndex(where: { $0.id == template.id }) ?? -1
+                item.tag = templateIndex
                 item.representedObject = template.id
-                if let icon = template.descriptor.icon,
-                   let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
-                    item.image = image
-                } else {
-                    // Fall back to a generic icon when the template's SF
-                    // Symbol name doesn't exist on this macOS version.
-                    item.image = NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
-                }
                 submenu.addItem(item)
             }
 
@@ -139,21 +145,8 @@ public final class FinderSync: FIFinderSync, NSMenuDelegate {
         }
 
         rootItem.submenu = submenu
-        submenu.delegate = self
         menu.addItem(rootItem)
         return menu
-    }
-
-    // Finder re-invokes this while tracking the submenu. Updating titles in
-    // place is safe here; we never add or remove items while the menu is open.
-    public func menuNeedsUpdate(_ menu: NSMenu) {
-        for item in menu.items {
-            guard item.tag >= 0,
-                  item.tag < templates.count,
-                  item.action == #selector(createFromTemplate(_:)) else { continue }
-            let template = templates[item.tag]
-            item.title = menuTitle(for: template, modifiers: NSEvent.modifierFlags)
-        }
     }
 
     private func menuTitle(for template: Template) -> String {
