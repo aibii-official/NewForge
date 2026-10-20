@@ -106,6 +106,86 @@ test("dotfile template does not get a duplicate extension") {
     expectEqual(second.lastPathComponent, ".gitignore 2")
 }
 
+// MARK: - smart naming derivation
+
+func makeTemplate(_ base: URL, _ rel: String, defaultName: [String: String], content: String, kind: String = "text") throws -> Template {
+    let dir = base.appendingPathComponent(rel, isDirectory: true)
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let json: [String: Any] = [
+        "id": rel.replacingOccurrences(of: "/", with: "."),
+        "name": ["en": rel],
+        "fileExtension": "txt",
+        "group": "dev",
+        "defaultName": defaultName,
+        "prompt": false,
+        "openAfterCreate": false,
+        "kind": kind,
+    ]
+    let jsonData = try JSONSerialization.data(withJSONObject: json)
+    try jsonData.write(to: dir.appendingPathComponent("template.json"))
+    try content.write(to: dir.appendingPathComponent("content.txt"), atomically: true, encoding: .utf8)
+    let store = TemplateStore(builtinRoot: base, userRoot: base.appendingPathComponent("empty"))
+    return store.load().templates.first!
+}
+
+try test("smart naming asks when filename is in defaultName") {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("newforge-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let t = try makeTemplate(tmp, "dev/usesname",
+                             defaultName: ["en": "{{filename}}-note"],
+                             content: "static")
+    check(t.usesFilenameAsData, "defaultName references filename")
+}
+
+try test("smart naming asks when filename is in content") {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("newforge-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let t = try makeTemplate(tmp, "dev/incontent",
+                             defaultName: ["en": "script"],
+                             content: "# {{filename}} by {{user}}")
+    check(t.usesFilenameAsData, "content references filename")
+}
+
+try test("smart naming silent for generic document") {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("newforge-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let t = try makeTemplate(tmp, "office/plain",
+                             defaultName: ["en": "Untitled"],
+                             content: "just plain content")
+    check(!t.usesFilenameAsData, "no filename reference anywhere")
+}
+
+try test("settings load reads explicit file") {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("newforge-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let url = tmp.appendingPathComponent("settings.json")
+    let json = """
+    {"alwaysPrompt":true,"neverPrompt":false,"autoOpen":false,"disabledIDs":["dev.python"]}
+    """
+    try json.write(to: url, atomically: true, encoding: .utf8)
+
+    let settings = SettingsStore.load(from: url)
+    check(settings.namingPolicy == .prompt, "alwaysPrompt should resolve to prompt")
+    check(!settings.autoOpen, "autoOpen should decode")
+    check(settings.disabledIDs == ["dev.python"], "disabledIDs should decode")
+
+    try "not-json".write(to: url, atomically: true, encoding: .utf8)
+    expectEqual(SettingsStore.load(from: url).namingPolicy, .smart,
+                "invalid settings should fall back to smart")
+}
+
 // MARK: - store + creator end to end
 
 func makeTemplateDir(_ base: URL, _ rel: String, _ json: String, _ content: String, _ contentName: String) throws {

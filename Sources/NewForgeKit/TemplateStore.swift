@@ -34,8 +34,10 @@ public final class TemplateStore {
         // Sandboxed appex: containerURL(forSecurityApplicationGroupIdentifier:)
         // would return a path we cannot actually write to because the free
         // provisioning profile drops the entitlement. Skip it entirely.
-        let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
+        // Use homeDirectoryForCurrentUser so the sandboxed extension resolves
+        // the REAL ~/Library/Application Support, not its container.
+        let base = fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
         return base.appendingPathComponent("NewForge/Templates", isDirectory: true)
     }
 

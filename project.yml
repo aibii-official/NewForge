@@ -30,6 +30,16 @@ settings:
 
 packages: {}
 
+schemes:
+  NewForge:
+    build:
+      targets:
+        NewForge: all
+        NewForgeKitTests: [test]
+    test:
+      targets:
+        - NewForgeKitTests
+
 targets:
   NewForgeKit:
     type: framework
@@ -60,7 +70,10 @@ targets:
     postBuildScripts:
       - name: Copy Templates
         script: |
-          cp -R "${SRCROOT}/Resources/Templates" "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Templates"
+          # -n: don't clobber an existing directory; we want the contents
+          # merged into Resources/Templates/, not nested under it.
+          mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Templates"
+          cp -R "${SRCROOT}/Resources/Templates/"* "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Templates/"
         basedOnDependencyAnalysis: false
     settings:
       base:
@@ -114,3 +127,6 @@ targets:
       - path: Tests/NewForgeKitTests
     dependencies:
       - target: NewForgeKit
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES

@@ -4,6 +4,12 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Read-only access to the user's Application Support so the extension
+	     can share settings.json and Templates with the unsandboxed app. -->
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+	<array>
+		<string>/Library/Application Support/NewForge/</string>
+	</array>
 	<!-- Lets us ask Finder (which is unsandboxed) to place the staged file
 	     anywhere the user can see. One-time TCC automation consent, then it
 	     works in every folder - no per-directory grants needed. -->

@@ -12,7 +12,7 @@
     "en": "data",
     "zh-Hans": "数据"
   },
-  "prompt": true,
+  "prompt": false,
   "openAfterCreate": true,
   "kind": "text"
 }

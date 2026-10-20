@@ -11,8 +11,15 @@ import NewForgeKit
 /// - honor the modifier flags: Option forces the naming panel, Control
 ///   forces silent creation
 /// - create the file, reveal it in Finder and optionally open it
+// NSExtensionMain looks up the principal class by the name in Info.plist.
+// For Swift classes that name is "<Module>.<Class>" ( Apple's official Finder
+// Sync template writes ___VARIABLE_moduleNamePrefixForClasses:XML___FinderSync
+// which expands to e.g. "MyExt.FinderSync"). We declare the class with
+// @objc(FinderSync) to give it a stable ObjC name and mark it public so the
+// symbol is visible to the ObjC runtime. The Info.plist uses
+// $(PRODUCT_MODULE_NAME).FinderSync which Swift resolves to the same class.
 @objc(FinderSync)
-final class FinderSync: FIFinderSync {
+public final class FinderSync: FIFinderSync {
 
     private var templates: [Template] = []
     private var settings = Settings()
@@ -56,10 +63,12 @@ final class FinderSync: FIFinderSync {
             nil,
             .deliverImmediately
         )
+
     }
 
     private func reloadState() {
         settings = SettingsStore.load()
+        NFLog.info("settings reloaded: alwaysPrompt=\(settings.alwaysPrompt) neverPrompt=\(settings.neverPrompt) autoOpen=\(settings.autoOpen) disabled=\(settings.disabledIDs.count)")
         let result = store.load()
         templates = result.templates
         if !result.errors.isEmpty {
@@ -71,13 +80,13 @@ final class FinderSync: FIFinderSync {
 
     /// Required by NSExtensionRequestHandling. Called when the extension is
     /// asked to handle a request from the host (Finder).
-    override func beginRequest(with context: NSExtensionContext) {
+    public override func beginRequest(with context: NSExtensionContext) {
         NFLog.info("beginRequest with context \(context)")
     }
 
     // MARK: - Menu
 
-    override func menu(for menuKind: FIMenuKind) -> NSMenu {
+    public override func menu(for menuKind: FIMenuKind) -> NSMenu {
         NFLog.info("menu(for: \(menuKind.rawValue)) called")
         let menu = NSMenu(title: "")
 
@@ -136,12 +145,21 @@ final class FinderSync: FIFinderSync {
 
     private func menuTitle(for template: Template) -> String {
         let name = template.localizedName()
-        switch effectiveNamingPolicy(for: template) {
-        case .prompt:
+        if shouldPrompt(for: template) {
             return String(format: NSLocalizedString("menu.item.prompt",
                 value: "%@\u{2026}", comment: "Item that will ask for a name"), name)
-        case .silent, .smart:
-            return name
+        }
+        return name
+    }
+
+    /// One source of truth for smart naming, used both to decorate the menu
+    /// ("..." means this item will present a naming panel) and to dispatch
+    /// the action. This prevents the icon and behavior from diverging.
+    private func shouldPrompt(for template: Template) -> Bool {
+        switch effectiveNamingPolicy(for: template) {
+        case .prompt: return true
+        case .silent: return false
+        case .smart:  return template.usesFilenameAsData
         }
     }
 
@@ -171,23 +189,13 @@ final class FinderSync: FIFinderSync {
         }
         NFLog.info("target directory \(directory.path)")
 
-        switch effectiveNamingPolicy(for: template) {
-        case .prompt:
+        if shouldPrompt(for: template) {
             NFLog.info("presenting name panel")
             presentNamePanel(for: template, in: directory)
-        case .silent:
+        } else {
             NFLog.info("silent create")
             let base = FileCreator.defaultBaseName(for: template, directory: directory)
             create(template, baseName: base, in: directory)
-        case .smart:
-            if template.descriptor.prompt {
-                NFLog.info("smart prompt")
-                presentNamePanel(for: template, in: directory)
-            } else {
-                NFLog.info("smart silent")
-                let base = FileCreator.defaultBaseName(for: template, directory: directory)
-                create(template, baseName: base, in: directory)
-            }
         }
     }
 

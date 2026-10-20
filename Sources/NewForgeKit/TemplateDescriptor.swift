@@ -57,6 +57,25 @@ public struct Template {
         Self.pick(descriptor.defaultName, locale: locale) ?? "Untitled"
     }
 
+    /// Whether the user-typed name is used as data by this template.
+    /// Smart naming uses this to decide whether prompting is necessary.
+    public var usesFilenameAsData: Bool {
+        if descriptor.prompt { return true }
+
+        // A default-name pattern such as "{{filename}}-note" means the
+        // typed value participates in the output and cannot be defaulted.
+        if descriptor.defaultName.values.contains(where: { $0.contains("{{filename}}") }) {
+            return true
+        }
+
+        // Text content can also inject the typed value into the document.
+        if case .text(let url) = content,
+           let raw = try? String(contentsOf: url, encoding: .utf8) {
+            return raw.contains("{{filename}}")
+        }
+        return false
+    }
+
     static func pick(_ dict: [String: String], locale: Locale) -> String? {
         // Deployment target is macOS 14, so Locale.Language is always there.
         let code = locale.language.languageCode?.identifier ?? "en"

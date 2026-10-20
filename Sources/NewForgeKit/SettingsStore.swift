@@ -2,18 +2,12 @@ import Foundation
 
 /// User preferences shared by the container app and the Finder extension.
 ///
-/// Both processes are sandboxed, so `UserDefaults.standard` would give each
-/// its own private domain inside its own container - the app would write
-/// preferences the extension could never see. Instead both share the
-/// `group.com.newforge` app group (declared in both entitlements files) and
-/// read/write the group suite. The app posts `newforgeSettingsChanged`
-/// after writing; the extension observes it via Darwin notifications and
-/// reloads before building its menu.
-///
-/// If the group suite is unavailable (e.g. the app group entitlement was
-/// not provisioned, which happens with ad-hoc `codesign --sign -` builds
-/// where entitlements are ignored) we fall back to `.standard` so the
-/// processes still run, just without shared settings.
+/// The app keeps its canonical JSON in ~/Library/Application Support/NewForge.
+/// The Finder extension cannot reliably read that real-home path from its
+/// sandbox, so the app also mirrors the JSON into the extension's private
+/// container. A Darwin notification tells the extension to reload after a
+/// save; this avoids App Group entitlements while keeping data delivery on
+/// the same unsandboxed-app side as file creation.
 public struct Settings {
 
     public enum NamingPolicy: String, CaseIterable {
@@ -35,45 +29,107 @@ public struct Settings {
     }
 
     public init() {}
+
+    init(alwaysPrompt: Bool, neverPrompt: Bool, autoOpen: Bool, disabledIDs: Set<String>) {
+        self.alwaysPrompt = alwaysPrompt
+        self.neverPrompt = neverPrompt
+        self.autoOpen = autoOpen
+        self.disabledIDs = disabledIDs
+    }
 }
 
 public enum SettingsStore {
 
     public static let darwinNotification = "com.newforge.app.settingsChanged"
+    private static let extensionBundleID = "com.newforge.app.finderext"
 
-    /// The defaults domain both processes use. App Groups would give a
-    /// shared container, but the free personal provisioning profile does
-    /// not include com.apple.security.application-groups, so the container
-    /// is never actually granted (writes fail with EPERM). We use each
-    /// process's own UserDefaults and reconcile via Darwin notification.
-    public static var shared: UserDefaults { .standard }
-
-    private enum Key {
-        static let alwaysPrompt = "naming.alwaysPrompt"
-        static let neverPrompt = "naming.neverPrompt"
-        static let autoOpen = "behavior.autoOpen"
-        static let disabledIDs = "templates.disabledIDs"
-        static let folderBookmarks = "folders.bookmarks"
+    /// The app's canonical settings file.
+    private static var settingsFile: URL {
+        let base = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
+        return base.appendingPathComponent("NewForge/settings.json")
     }
 
-    public static func load(defaults: UserDefaults = shared) -> Settings {
-        var s = Settings()
-        s.alwaysPrompt = defaults.bool(forKey: Key.alwaysPrompt)
-        s.neverPrompt = defaults.bool(forKey: Key.neverPrompt)
-        // Default true when the key was never written.
-        s.autoOpen = defaults.object(forKey: Key.autoOpen) as? Bool ?? true
-        if let list = defaults.stringArray(forKey: Key.disabledIDs) {
-            s.disabledIDs = Set(list)
+    /// The extension's readable copy. `applicationSupportDirectory` resolves
+    /// inside the appex container when this code runs in the extension.
+    private static var extensionSettingsFile: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
+        return base.appendingPathComponent("NewForge/settings.json")
+    }
+
+    /// The app is unsandboxed and may write directly into the extension's
+    /// private container, just as it reads the extension's staging directory
+    /// during file creation.
+    private static var extensionMirrorFile: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers/\(extensionBundleID)/Data/Library/Application Support/NewForge/settings.json")
+    }
+
+    /// On-disk representation. Keep it flat so hand-editing stays trivial.
+    private struct Wire: Codable {
+        var alwaysPrompt: Bool
+        var neverPrompt: Bool
+        var autoOpen: Bool
+        var disabledIDs: [String]
+    }
+
+    public static func load() -> Settings {
+        let url = Bundle.main.bundleIdentifier == extensionBundleID
+            ? extensionSettingsFile
+            : settingsFile
+        guard let data = try? Data(contentsOf: url),
+              let wire = try? JSONDecoder().decode(Wire.self, from: data) else {
+            return Settings()
         }
+        var s = Settings()
+        s.alwaysPrompt = wire.alwaysPrompt
+        s.neverPrompt = wire.neverPrompt
+        s.autoOpen = wire.autoOpen
+        s.disabledIDs = Set(wire.disabledIDs)
         return s
     }
 
+    /// Exposed for tests so the context-specific paths above stay testable.
+    static func load(from url: URL) -> Settings {
+        guard let data = try? Data(contentsOf: url),
+              let wire = try? JSONDecoder().decode(Wire.self, from: data) else {
+            return Settings()
+        }
+        return Settings(alwaysPrompt: wire.alwaysPrompt,
+                        neverPrompt: wire.neverPrompt,
+                        autoOpen: wire.autoOpen,
+                        disabledIDs: Set(wire.disabledIDs))
+    }
 
-    public static func save(_ settings: Settings, defaults: UserDefaults = shared, notify: Bool = true) {
-        defaults.set(settings.alwaysPrompt, forKey: Key.alwaysPrompt)
-        defaults.set(settings.neverPrompt, forKey: Key.neverPrompt)
-        defaults.set(settings.autoOpen, forKey: Key.autoOpen)
-        defaults.set(Array(settings.disabledIDs), forKey: Key.disabledIDs)
+    public static func save(_ settings: Settings, notify: Bool = true) {
+        let wire = Wire(alwaysPrompt: settings.alwaysPrompt,
+                        neverPrompt: settings.neverPrompt,
+                        autoOpen: settings.autoOpen,
+                        disabledIDs: Array(settings.disabledIDs))
+        guard let data = try? JSONEncoder().encode(wire) else {
+            NFLog.error("failed to encode settings")
+            return
+        }
+        do {
+            try FileManager.default.createDirectory(
+                at: settingsFile.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try data.write(to: settingsFile, options: .atomic)
+        } catch {
+            NFLog.error("failed to save settings: \(error.localizedDescription)")
+        }
+        if Bundle.main.bundleIdentifier == "com.newforge.app" {
+            do {
+                try FileManager.default.createDirectory(
+                    at: extensionMirrorFile.deletingLastPathComponent(),
+                    withIntermediateDirectories: true)
+                try data.write(to: extensionMirrorFile, options: .atomic)
+            } catch {
+                NFLog.error("failed to mirror settings into extension container: \(error.localizedDescription)")
+            }
+        }
         if notify {
             CFNotificationCenterPostNotification(
                 CFNotificationCenterGetDarwinNotifyCenter(),
@@ -82,4 +138,5 @@ public enum SettingsStore {
             )
         }
     }
+
 }

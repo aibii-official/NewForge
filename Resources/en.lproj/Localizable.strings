@@ -30,13 +30,17 @@
 "prefs.reload" = "Reload";
 "prefs.badge.custom" = "Custom";
 "prefs.naming" = "Naming";
-"prefs.naming.smart" = "Ask when the template suggests it";
-"prefs.naming.prompt" = "Always ask for a name";
-"prefs.naming.silent" = "Never ask, name automatically";
+"prefs.naming.smart" = "Smart (recommended)";
+"prefs.naming.prompt" = "Always ask";
+"prefs.naming.silent" = "Never ask";
 "prefs.naming.hint" = "In the Finder menu: hold Option to force the rename dialog, hold Control to create instantly.";
 "prefs.behavior" = "Behavior";
 "prefs.autoOpen" = "Open file after creation";
 
+"prefs.naming.smartExplanation" = "Items whose contents or default name use the typed file name end with … and ask. Other items are created immediately.";
+"prefs.naming.smartExample" = "Examples: Python Script… asks for a name; Untitled Text creates without a dialog.";
+"prefs.naming.promptStatus" = "Every template will end with … and open the naming panel.";
+"prefs.naming.silentStatus" = "No template will show …; files use their default names.";
 "group.office" = "Office";
 "group.analysis" = "Data Analysis";
 "group.dev" = "Development";

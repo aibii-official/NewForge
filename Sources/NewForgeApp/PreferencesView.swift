@@ -85,15 +85,47 @@ struct PreferencesView: View {
                         self.model.settings.neverPrompt = policy == .silent
                     }
                 )) {
-                    Text(NSLocalizedString("prefs.naming.smart", value: "Ask when the template suggests it", comment: ""))
+                    Text(NSLocalizedString("prefs.naming.smart", value: "Smart (recommended)", comment: ""))
                         .tag(Settings.NamingPolicy.smart)
-                    Text(NSLocalizedString("prefs.naming.prompt", value: "Always ask for a name", comment: ""))
+                    Text(NSLocalizedString("prefs.naming.prompt", value: "Always ask", comment: ""))
                         .tag(Settings.NamingPolicy.prompt)
-                    Text(NSLocalizedString("prefs.naming.silent", value: "Never ask, name automatically", comment: ""))
+                    Text(NSLocalizedString("prefs.naming.silent", value: "Never ask", comment: ""))
                         .tag(Settings.NamingPolicy.silent)
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
+
+                if model.settings.namingPolicy == .smart {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.caption)
+                            .foregroundColor(.accentColor)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(NSLocalizedString("prefs.naming.smartExplanation",
+                                value: "Items whose contents or default name use the typed file name end with \u{2026} and ask. Other items are created immediately.",
+                                comment: ""))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(NSLocalizedString("prefs.naming.smartExample",
+                                value: "Examples: Python Script\u{2026} asks for a name; Untitled Text creates without a dialog.",
+                                comment: ""))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } else if model.settings.namingPolicy == .prompt {
+                    Label(NSLocalizedString("prefs.naming.promptStatus",
+                        value: "Every template will end with \u{2026} and open the naming panel.",
+                        comment: ""), systemImage: "pencil.and.list")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Label(NSLocalizedString("prefs.naming.silentStatus",
+                        value: "No template will show \u{2026}; files use their default names.",
+                        comment: ""), systemImage: "bolt")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
 
                 Text(NSLocalizedString("prefs.naming.hint",
                     value: "In the Finder menu: hold Option to force the rename dialog, hold Control to create instantly.",

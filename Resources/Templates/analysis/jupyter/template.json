@@ -12,7 +12,7 @@
     "en": "analysis-{{date}}",
     "zh-Hans": "分析-{{date}}"
   },
-  "prompt": true,
+  "prompt": false,
   "openAfterCreate": true,
   "kind": "text"
 }

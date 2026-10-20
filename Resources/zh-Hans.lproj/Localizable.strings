@@ -30,13 +30,17 @@
 "prefs.reload" = "重新加载";
 "prefs.badge.custom" = "自定义";
 "prefs.naming" = "命名方式";
-"prefs.naming.smart" = "按模板建议询问（推荐）";
-"prefs.naming.prompt" = "总是询问文件名";
-"prefs.naming.silent" = "从不询问，自动命名";
+"prefs.naming.smart" = "智能（推荐）";
+"prefs.naming.prompt" = "总是询问";
+"prefs.naming.silent" = "从不询问";
 "prefs.naming.hint" = "在访达菜单中：按住 Option 强制弹出命名框，按住 Control 立即创建。";
 "prefs.behavior" = "行为";
 "prefs.autoOpen" = "创建后自动打开文件";
 
+"prefs.naming.smartExplanation" = "当内容或默认文件名会使用输入的名称时，菜单项会以“…”结尾并弹出命名框；其他项立即创建。";
+"prefs.naming.smartExample" = "示例：Python 脚本… 会询问名称；未命名文本 会直接创建。";
+"prefs.naming.promptStatus" = "所有模板都会以“…”结尾并弹出命名框。";
+"prefs.naming.silentStatus" = "所有模板都不显示“…”，直接使用默认名称创建。";
 "group.office" = "办公";
 "group.analysis" = "数据分析";
 "group.dev" = "开发";
