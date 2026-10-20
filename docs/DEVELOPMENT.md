@@ -107,8 +107,22 @@ Two build details the Makefile handles that are easy to get wrong by hand:
   (`TemplateStore.defaultUserRoot()`); the extension's own
   `~/Library/Application Support` resolves inside its private container
   and is never shared with the app.
-- Modifier keys are read in `menu(for:)` via `NSEvent.modifierFlags`:
-  Option forces the naming panel, Control forces silent creation.
+- The Finder re-materializes the `NSMenu` returned by `menu(for:)` in its own
+  process, and the extension never receives the keyboard events that occur
+  while the menu is open, so rows are intentionally static: "New File" is a
+  normal hover-expanding submenu and every template shows a plain title
+  (no `…` decoration). Custom views, `NSMenuDelegate`, `isAlternate`,
+  `keyEquivalentModifierMask`, and `isHidden` do not survive the Finder Sync
+  boundary on macOS 27, which rules out live title changes.
+- Modifier behavior is decided when a row is clicked. The handler reads the
+  session key state with `GetCurrentKeyModifiers()` (Carbon), using
+  `CGEventSource.flagsState(.combinedSessionState)` and
+  `CGEventSource.keyState` as a second opinion; the stale
+  `NSEvent.modifierFlags` cache of the extension process is never used.
+  Option forces the naming panel, Control forces silent creation, and
+  Control wins when both are held. The target folder is captured inside
+  `menu(for:)` because `targetedURL`/`selectedItemURLs` are only valid there
+  and inside the actions it created.
 - All diagnostic output goes through `os_log` with subsystem
   `com.newforge.app` (`NFLog` in NewForgeKit). `NSLog` output from
   sandboxed extensions is data-protected and invisible in `log show`,

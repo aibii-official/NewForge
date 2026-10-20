@@ -2,8 +2,7 @@
 
 "menu.root" = "新建文件";
 "menu.empty" = "暂无可用模板";
-"menu.hint" = "按住 Option 重命名，按住 Control 立即创建";
-"menu.item.prompt" = "%@…";
+"menu.hint" = "按 Option 重命名，按 Control 立即创建";
 
 "panel.title" = "新建 %@";
 "panel.prompt" = "文件名称：";
@@ -16,9 +15,9 @@
 "error.unreadableTemplate" = "无法读取模板：%@";
 
 "menubar.enabledCount" = "已启用 %d 种模板";
-"menubar.preferences" = "偏好设置…";
+"menubar.preferences" = "偏好设置";
 "menubar.openTemplates" = "打开模板文件夹";
-"menubar.howToEnable" = "如何启用 Finder 扩展…";
+"menubar.howToEnable" = "如何启用 Finder 扩展";
 "menubar.quit" = "退出 NewForge";
 
 "prefs.templates" = "模板";
@@ -37,10 +36,10 @@
 "prefs.behavior" = "行为";
 "prefs.autoOpen" = "创建后自动打开文件";
 
-"prefs.naming.smartExplanation" = "当内容或默认文件名会使用输入的名称时，菜单项会以“…”结尾并弹出命名框；其他项立即创建。";
-"prefs.naming.smartExample" = "示例：Python 脚本… 会询问名称；未命名文本 会直接创建。";
-"prefs.naming.promptStatus" = "所有模板都会以“…”结尾并弹出命名框。";
-"prefs.naming.silentStatus" = "所有模板都不显示“…”，直接使用默认名称创建。";
+"prefs.naming.smartExplanation" = "当内容或默认文件名会使用输入的名称时，会弹出命名框；其他项直接创建。";
+"prefs.naming.smartExample" = "示例：Python 脚本会询问名称；未命名文本会直接创建。";
+"prefs.naming.promptStatus" = "所有模板都会弹出命名框。";
+"prefs.naming.silentStatus" = "所有模板都直接使用默认名称创建。";
 "group.office" = "办公";
 "group.analysis" = "数据分析";
 "group.dev" = "开发";

@@ -2,8 +2,7 @@
 
 "menu.root" = "New File";
 "menu.empty" = "No Templates Available";
-"menu.hint" = "Hold Option to rename, Control for instant create";
-"menu.item.prompt" = "%@…";
+"menu.hint" = "Press Option to rename, Control for instant create";
 
 "panel.title" = "New %@";
 "panel.prompt" = "File name:";
@@ -16,9 +15,9 @@
 "error.unreadableTemplate" = "Cannot read template: %@";
 
 "menubar.enabledCount" = "%d template types enabled";
-"menubar.preferences" = "Preferences…";
+"menubar.preferences" = "Preferences";
 "menubar.openTemplates" = "Open Templates Folder";
-"menubar.howToEnable" = "How to Enable the Finder Extension…";
+"menubar.howToEnable" = "How to Enable the Finder Extension";
 "menubar.quit" = "Quit NewForge";
 
 "prefs.templates" = "Templates";
@@ -37,10 +36,10 @@
 "prefs.behavior" = "Behavior";
 "prefs.autoOpen" = "Open file after creation";
 
-"prefs.naming.smartExplanation" = "Items whose contents or default name use the typed file name end with … and ask. Other items are created immediately.";
-"prefs.naming.smartExample" = "Examples: Python Script… asks for a name; Untitled Text creates without a dialog.";
-"prefs.naming.promptStatus" = "Every template will end with … and open the naming panel.";
-"prefs.naming.silentStatus" = "No template will show …; files use their default names.";
+"prefs.naming.smartExplanation" = "Items whose contents or default name use the typed file name will ask for a name. Other items are created immediately.";
+"prefs.naming.smartExample" = "Examples: Python Script asks for a name; Untitled Text creates without a dialog.";
+"prefs.naming.promptStatus" = "Every template will open the naming panel.";
+"prefs.naming.silentStatus" = "Every template is created immediately with its default name.";
 "group.office" = "Office";
 "group.analysis" = "Data Analysis";
 "group.dev" = "Development";

@@ -102,7 +102,7 @@ struct MenuBarMenu: View {
 
         Divider()
 
-        Button(NSLocalizedString("menubar.preferences", value: "Preferences\u{2026}", comment: "")) {
+        Button(NSLocalizedString("menubar.preferences", value: "Preferences", comment: "")) {
             openSettings()
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -113,7 +113,7 @@ struct MenuBarMenu: View {
             NSWorkspace.shared.open(url)
         }
 
-        Button(NSLocalizedString("menubar.howToEnable", value: "How to Enable the Finder Extension\u{2026}", comment: "")) {
+        Button(NSLocalizedString("menubar.howToEnable", value: "How to Enable the Finder Extension", comment: "")) {
             model.showingEnableHelp = true
             openSettings()
             NSApp.activate(ignoringOtherApps: true)

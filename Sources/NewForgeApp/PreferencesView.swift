@@ -102,12 +102,12 @@ struct PreferencesView: View {
                             .foregroundColor(.accentColor)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(NSLocalizedString("prefs.naming.smartExplanation",
-                                value: "Items whose contents or default name use the typed file name end with \u{2026} and ask. Other items are created immediately.",
+                                value: "Items whose contents or default name use the typed file name will ask for a name. Other items are created immediately.",
                                 comment: ""))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Text(NSLocalizedString("prefs.naming.smartExample",
-                                value: "Examples: Python Script\u{2026} asks for a name; Untitled Text creates without a dialog.",
+                                value: "Examples: Python Script asks for a name; Untitled Text creates without a dialog.",
                                 comment: ""))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -115,13 +115,13 @@ struct PreferencesView: View {
                     }
                 } else if model.settings.namingPolicy == .prompt {
                     Label(NSLocalizedString("prefs.naming.promptStatus",
-                        value: "Every template will end with \u{2026} and open the naming panel.",
+                        value: "Every template will open the naming panel.",
                         comment: ""), systemImage: "pencil.and.list")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 } else {
                     Label(NSLocalizedString("prefs.naming.silentStatus",
-                        value: "No template will show \u{2026}; files use their default names.",
+                        value: "Every template is created immediately with its default name.",
                         comment: ""), systemImage: "bolt")
                         .font(.caption)
                         .foregroundColor(.secondary)

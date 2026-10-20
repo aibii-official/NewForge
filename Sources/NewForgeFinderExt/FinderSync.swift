@@ -1,4 +1,7 @@
 import Cocoa
+import Carbon.HIToolbox
+import CoreGraphics
+import Darwin
 import FinderSync
 import NewForgeKit
 
@@ -7,9 +10,9 @@ import NewForgeKit
 /// Responsibilities:
 /// - claim every folder (`directoryURLs = /`) so the menu appears anywhere
 ///   Finder shows a contextual menu
-/// - build the "New File" submenu from templates on disk
-/// - honor the modifier flags: Option forces the naming panel, Control
-///   forces silent creation
+/// - show one native "New File" submenu with a plain row per template
+/// - let Option/Control override the naming policy at click time: Option
+///   forces the naming panel, Control forces silent creation
 /// - create the file, reveal it in Finder and optionally open it
 // NSExtensionMain looks up the principal class by the name in Info.plist.
 // For Swift classes that name is "<Module>.<Class>" ( Apple's official Finder
@@ -24,6 +27,7 @@ public final class FinderSync: FIFinderSync {
     private var templates: [Template] = []
     private var settings = Settings()
     private var namePanel: NamePanelController?
+    private var pendingDirectory: URL?
 
     private lazy var store: TemplateStore = {
         let builtin = Bundle.main.resourceURL?
@@ -88,7 +92,18 @@ public final class FinderSync: FIFinderSync {
 
     public override func menu(for menuKind: FIMenuKind) -> NSMenu {
         NFLog.info("menu(for: \(menuKind.rawValue)) called")
-        let menu = NSMenu(title: "")
+        guard claimMenuPresentation() else {
+            // Finder asks every live extension instance for the menu and
+            // concatenates the results. A second instance (Open/Save dialogs
+            // spawn one) would duplicate every row, so only one claims it.
+            NFLog.info("menu(for: \(menuKind.rawValue)) suppressed duplicate instance")
+            return NSMenu(title: "")
+        }
+
+        // targetedURL/selectedItemURLs are documented as valid only inside
+        // this callback or the actions it created. Capture the folder here so
+        // any later picker can still create into the right place.
+        pendingDirectory = targetDirectory()
 
         let rootTitle = NSLocalizedString("menu.root", value: "New File", comment: "Root menu title")
         let rootItem = NSMenuItem(title: rootTitle, action: nil, keyEquivalent: "")
@@ -96,7 +111,6 @@ public final class FinderSync: FIFinderSync {
 
         let submenu = NSMenu(title: rootTitle)
         let enabled = templates.filter { !settings.disabledIDs.contains($0.id) }
-
         if enabled.isEmpty {
             let empty = NSMenuItem(
                 title: NSLocalizedString("menu.empty", value: "No Templates Available", comment: ""),
@@ -105,39 +119,23 @@ public final class FinderSync: FIFinderSync {
             submenu.addItem(empty)
         } else {
             for template in enabled {
-                let templateIndex = templates.firstIndex(where: { $0.id == template.id }) ?? -1
+                let index = templates.firstIndex(where: { $0.id == template.id }) ?? -1
                 let iconName = template.descriptor.icon
                 let image = iconName.flatMap {
                     NSImage(systemSymbolName: $0, accessibilityDescription: nil)
                 } ?? NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
-
-                // A custom view is the only mechanism Finder Sync reliably
-                // keeps tracking while modifier keys are held.
-                let view = DynamicMenuItemView(
-                    normalTitle: menuTitle(for: template, modifiers: []),
-                    promptTitle: menuTitle(for: template, modifiers: [.option]),
-                    plainTitle: menuTitle(for: template, modifiers: [.control]),
-                    iconImage: image
-                )
-                let item = NSMenuItem(title: view.currentTitle,
-                                      action: #selector(createFromTemplate(_:)),
-                                      keyEquivalent: "")
-                item.view = view
-                item.target = self
-                // Finder dispatches the action on a *copy* of the menu item
-                // it re-materializes from our returned menu. On macOS 26/27
-                // that copy loses `representedObject` (it arrives as nil),
-                // but `tag` survives. Keep both: tag is the primary key.
-                item.tag = templateIndex
-                item.representedObject = template.id
-                submenu.addItem(item)
+                submenu.addItem(templateItem(
+                    index: index,
+                    templateID: template.id,
+                    title: template.localizedName(),
+                    image: image,
+                    action: #selector(pickFromTemplate(_:))
+                ))
             }
-
-            // Modifier hint, like Finder's own alternative items.
             submenu.addItem(.separator())
             let hint = NSMenuItem(
                 title: NSLocalizedString("menu.hint",
-                    value: "Hold Option to rename, Control for instant create",
+                    value: "Press Option to rename, Control for instant create",
                     comment: "Modifier hint, disabled item"),
                 action: nil, keyEquivalent: "")
             hint.isEnabled = false
@@ -145,64 +143,106 @@ public final class FinderSync: FIFinderSync {
         }
 
         rootItem.submenu = submenu
+        let menu = NSMenu(title: "")
         menu.addItem(rootItem)
+
         return menu
     }
 
-    private func menuTitle(for template: Template) -> String {
-        menuTitle(for: template, modifiers: NSEvent.modifierFlags)
-    }
+    /// The two FinderSync instances share one sandbox container, so a tiny
+    /// O_EXCL claim file inside that container elects a single menu provider.
+    /// A fresh claim suppresses the peer; the claim refreshes for re-entry
+    /// from the same process and expires after a few seconds on crash.
+    private func claimMenuPresentation() -> Bool {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("com.newforge.menu-claim")
+        let myPid = ProcessInfo.processInfo.processIdentifier
 
-    private func menuTitle(for template: Template, modifiers: NSEvent.ModifierFlags) -> String {
-        let name = template.localizedName()
-        if shouldPrompt(for: template, modifiers: modifiers) {
-            return String(format: NSLocalizedString("menu.item.prompt",
-                value: "%@\u{2026}", comment: "Item that will ask for a name"), name)
+        let created = url.withUnsafeFileSystemRepresentation { path -> Bool in
+            guard let path else { return false }
+            let fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+            guard fd >= 0 else { return false }
+            defer { close(fd) }
+            var text = "\(myPid)"
+            text.withUTF8 { bytes in
+                _ = write(fd, bytes.baseAddress, bytes.count)
+            }
+            return true
         }
-        return name
+        if created { return true }
+
+        guard let data = try? Data(contentsOf: url),
+              let owner = Int(String(decoding: data, as: UTF8.self)) else {
+            try? FileManager.default.removeItem(at: url)
+            return claimMenuPresentation()
+        }
+        if owner == myPid {
+            // Same process opening another menu right away: refresh and win.
+            try? String(myPid).write(to: url, atomically: true, encoding: .utf8)
+            return true
+        }
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+           let modified = attrs[.modificationDate] as? Date,
+           Date().timeIntervalSince(modified) >= 5 {
+            try? FileManager.default.removeItem(at: url)
+            return claimMenuPresentation()
+        }
+        return false
     }
 
-    /// One source of truth for smart naming, used both to decorate the menu
-    /// ("..." means this item will present a naming panel) and to dispatch
-    /// the action. This prevents the icon and behavior from diverging.
-    private func shouldPrompt(for template: Template, modifiers: NSEvent.ModifierFlags) -> Bool {
-        switch effectiveNamingPolicy(for: template, modifiers: modifiers) {
+    private func templateItem(
+        index: Int,
+        templateID: String,
+        title: String,
+        image: NSImage?,
+        action: Selector
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        item.image = image
+        // Finder dispatches the action on a *copy* of the menu item it
+        // re-materializes from our returned menu. On macOS 26/27 that copy
+        // loses `representedObject` (it arrives as nil), but `tag` survives.
+        // Keep both: tag is the primary key, representedObject a fast path.
+        item.tag = index
+        item.representedObject = templateID
+        return item
+    }
+
+    /// One source of truth for smart naming, used to dispatch the action.
+    private func shouldPrompt(for template: Template, policy: Settings.NamingPolicy) -> Bool {
+        switch policy {
         case .prompt: return true
         case .silent: return false
         case .smart:  return template.usesFilenameAsData
         }
     }
 
-    private func effectiveNamingPolicy(
-        for template: Template,
-        modifiers: NSEvent.ModifierFlags = NSEvent.modifierFlags
-    ) -> Settings.NamingPolicy {
-        let flags = modifiers
-        if flags.contains(.control) { return .silent }
-        if flags.contains(.option) { return .prompt }
-        return settings.namingPolicy
-    }
-
     // MARK: - Action
 
-    @objc private func createFromTemplate(_ sender: NSMenuItem) {
+    private func templateID(for sender: NSMenuItem) -> String? {
         let templateID = (sender.representedObject as? String)
             ?? (sender.tag >= 0 && sender.tag < templates.count ? templates[sender.tag].id : nil)
-        NFLog.info("createFromTemplate: representedObject=\(sender.representedObject as? String ?? "nil") tag=\(sender.tag) resolved=\(templateID ?? "nil")")
+        return templateID
+    }
+
+    @objc private func pickFromTemplate(_ sender: NSMenuItem) {
+        let override = currentModifierOverride()
         reloadState()   // pick up any template edits since the menu opened
-        guard let templateID, let template = templates.first(where: { $0.id == templateID }) else {
+        guard let templateID = templateID(for: sender),
+              let template = templates.first(where: { $0.id == templateID }) else {
             NFLog.error("template not found (tag=\(sender.tag), representedObject=\(sender.representedObject as? String ?? "nil"))")
             return
         }
-        NFLog.info("found template \(template.id)")
-        guard let directory = targetDirectory() else {
-            NFLog.error("no target directory - targetedURL and selectedItemURLs both nil")
+        NFLog.info("picked template \(template.id) override=\(override?.rawValue ?? "nil")")
+        guard let directory = pendingDirectory ?? targetDirectory() else {
+            NFLog.error("no target directory for template picker")
             NSSound.beep()
             return
         }
         NFLog.info("target directory \(directory.path)")
 
-        if shouldPrompt(for: template, modifiers: NSEvent.modifierFlags) {
+        if shouldPrompt(for: template, policy: override ?? settings.namingPolicy) {
             NFLog.info("presenting name panel")
             presentNamePanel(for: template, in: directory)
         } else {
@@ -210,6 +250,30 @@ public final class FinderSync: FIFinderSync {
             let base = FileCreator.defaultBaseName(for: template, directory: directory)
             create(template, baseName: base, in: directory)
         }
+    }
+
+    /// The extension process never receives Finder's keyboard events, so
+    /// `NSEvent.modifierFlags` is stale here. Read the event system's
+    /// session-level key state instead: GetCurrentKeyModifiers() is the
+    /// primary source and CGEventSource is a second opinion. Neither requires
+    /// Accessibility permission from the sandboxed appex.
+    private func currentModifierOverride() -> Settings.NamingPolicy? {
+        let flags = CGEventSource.flagsState(.combinedSessionState)
+        let carbon = GetCurrentKeyModifiers()
+        let optionHeld = flags.contains(.maskAlternate)
+            || (carbon & (1 << 11)) != 0   // optionKey in Carbon
+            || CGEventSource.keyState(.combinedSessionState, key: 58)
+            || CGEventSource.keyState(.combinedSessionState, key: 61)
+        let controlHeld = flags.contains(.maskControl)
+            || (carbon & (1 << 12)) != 0   // controlKey in Carbon
+            || CGEventSource.keyState(.combinedSessionState, key: 59)
+            || CGEventSource.keyState(.combinedSessionState, key: 62)
+        let override: Settings.NamingPolicy?
+        if controlHeld { override = .silent }
+        else if optionHeld { override = .prompt }
+        else { override = nil }
+        NFLog.info("key state at click: flags=0x\(String(flags.rawValue, radix: 16)) carbon=0x\(String(carbon, radix: 16)) override=\(override?.rawValue ?? "nil")")
+        return override
     }
 
     private func targetDirectory() -> URL? {

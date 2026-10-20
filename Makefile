@@ -53,7 +53,7 @@ $(EXTEXE): $(KIT) $(EXTSWIFTS) NewForgeFinderExt/Info.plist
 	  -module-cache-path "$(MODULECACHE)" \
 	  -I $(BUILD) $(EXTSWIFTS) \
 	  -L $(BUILD) -lNewForgeKit \
-	  -framework Cocoa -framework FinderSync -framework Foundation \
+	  -framework Cocoa -framework FinderSync -framework Foundation -framework Carbon \
 	  -Xlinker -e -Xlinker _NSExtensionMain \
 	  -o $(EXTEXE)
 	cp NewForgeFinderExt/Info.plist $(EXT)/Contents/Info.plist
@@ -94,7 +94,7 @@ $(APP): $(APPEXE) $(EXTEXE)
 	cp -R Resources/zh-Hans.lproj $(APP)/Contents/Resources/ 2>/dev/null || true
 	cp -R Resources/Assets.xcassets $(APP)/Contents/Resources/ 2>/dev/null || true
 	codesign --force --deep --sign - $(APP) 2>/dev/null || true
-	$(PLUGINKIT) -f -R trusted $(APP) 2>/dev/null || true
+	$(PLUGINKIT) -u -f "$(APP)" 2>/dev/null || true
 	@echo ""
 	@echo "Built $(APP)"
 	@echo "Run 'make run' to launch it, then enable the extension in"
@@ -131,6 +131,11 @@ install:
 	-killall Finder 2>/dev/null
 	rm -rf /Applications/NewForge.app
 	cp -R $(RELEASE_APP) /Applications/NewForge.app
+	# xcodebuild auto-registers its DerivedData product; drop that copy and
+	# leave only the /Applications bundle in LaunchServices.
+	$(PLUGINKIT) -u "$(RELEASE_APP)/Contents/PlugIns/NewForgeFinderExt.appex" 2>/dev/null || true
+	$(PLUGINKIT) -u "$(RELEASE_APP)" 2>/dev/null || true
+	@rm -rf "$(RELEASE_APP)"
 	$(PLUGINKIT) -f -R trusted /Applications/NewForge.app 2>/dev/null || true
 	open /Applications/NewForge.app
 	@echo ""
@@ -138,4 +143,6 @@ install:
 	@echo "The app registers itself as a login item on first launch."
 
 clean:
+	-$(PLUGINKIT) -u "$(APP)/Contents/PlugIns/NewForgeFinderExt.appex" 2>/dev/null
+	-$(PLUGINKIT) -u -f "$(APP)" 2>/dev/null
 	rm -rf $(BUILD)
