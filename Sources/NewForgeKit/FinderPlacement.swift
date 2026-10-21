@@ -50,7 +50,13 @@ public enum FinderPlacement {
 
         switch template.content {
         case .binary(let source):
-            try fm.copyItem(at: source, to: dest)
+            // `copyItem` of a code-signed bundle resource can produce a file
+            // clone that the unsandboxed app cannot open across the container
+            // boundary. Read the bytes explicitly so the staged payload is a
+            // plain, fully materialized file just like the text path below.
+            let data = try Data(contentsOf: source, options: [.mappedIfSafe])
+            try data.write(to: dest, options: .atomic)
+            NFLog.info("staged binary \(dest.path) (\(data.count) bytes)")
         case .text(let source):
             guard let raw = try? String(contentsOf: source, encoding: .utf8) else {
                 throw CreateError.unreadableTemplate(source.path)
